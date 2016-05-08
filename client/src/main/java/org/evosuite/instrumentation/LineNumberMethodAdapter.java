@@ -20,7 +20,6 @@
 package org.evosuite.instrumentation;
 
 import org.evosuite.PackageInfo;
-import org.evosuite.testcase.execution.ExecutionTrace;
 import org.evosuite.testcase.execution.ExecutionTracer;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
@@ -45,10 +44,6 @@ public class LineNumberMethodAdapter extends MethodVisitor {
 
 	private final String className;
 
-	private boolean hadInvokeSpecial = false;
-
-	int currentLine = 0;
-
 	/**
 	 * <p>Constructor for LineNumberMethodAdapter.</p>
 	 *
@@ -63,20 +58,14 @@ public class LineNumberMethodAdapter extends MethodVisitor {
 		fullMethodName = methodName + desc;
 		this.className = className;
 		this.methodName = methodName;
-		if (!methodName.equals("<init>"))
-			hadInvokeSpecial = true;
 	}
 
 	/** {@inheritDoc} */
 	@Override
 	public void visitLineNumber(int line, Label start) {
 		super.visitLineNumber(line, start);
-		currentLine = line;
 
 		if (methodName.equals("<clinit>"))
-			return;
-
-		if (!hadInvokeSpecial)
 			return;
 
 		LinePool.addLine(className, fullMethodName, line);
@@ -94,10 +83,6 @@ public class LineNumberMethodAdapter extends MethodVisitor {
 	/** {@inheritDoc} */
 	@Override
 	public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
-		if (opcode == Opcodes.INVOKESPECIAL) {
-			if (methodName.equals("<init>"))
-				hadInvokeSpecial = true;
-		}
 		super.visitMethodInsn(opcode, owner, name, desc, itf);
 	}
 
