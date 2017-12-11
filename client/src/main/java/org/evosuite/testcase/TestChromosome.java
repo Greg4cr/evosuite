@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2016 Gordon Fraser, Andrea Arcuri and EvoSuite
+ * Copyright (C) 2010-2017 Gordon Fraser, Andrea Arcuri and EvoSuite
  * contributors
  *
  * This file is part of EvoSuite.
@@ -38,7 +38,6 @@ import org.evosuite.testcase.statements.FunctionalMockStatement;
 import org.evosuite.testcase.statements.PrimitiveStatement;
 import org.evosuite.testcase.statements.Statement;
 import org.evosuite.testcase.variable.VariableReference;
-import org.evosuite.testsuite.CurrentChromosomeTracker;
 import org.evosuite.testsuite.TestSuiteFitnessFunction;
 import org.evosuite.utils.Randomness;
 import org.slf4j.Logger;
@@ -111,7 +110,6 @@ public class TestChromosome extends ExecutableChromosome {
 		if (changed) {
 			clearCachedResults();
 		}
-		CurrentChromosomeTracker.getInstance().changed(this);
 	}
 
 	/**
@@ -179,14 +177,13 @@ public class TestChromosome extends ExecutableChromosome {
 		}
 		for (int i = position2; i < other.size(); i++) {
 			testFactory.appendStatement(offspring.test,
-			                            ((TestChromosome) other).test.getStatement(i));
+					((TestChromosome) other).test.getStatement(i));
 		}
 		if (!Properties.CHECK_MAX_LENGTH
-		        || offspring.test.size() <= Properties.CHROMOSOME_LENGTH) {
+				|| offspring.test.size() <= Properties.CHROMOSOME_LENGTH) {
 			test = offspring.test;
+			setChanged(true);
 		}
-
-		setChanged(true);
 	}
 
 	/**
@@ -283,7 +280,7 @@ public class TestChromosome extends ExecutableChromosome {
 	@SuppressWarnings("unchecked")
 	@Override
 	public boolean localSearch(LocalSearchObjective<? extends Chromosome> objective) {
-		TestCaseLocalSearch localSearch = TestCaseLocalSearch.getLocalSearch();
+		TestCaseLocalSearch localSearch = TestCaseLocalSearch.selectTestCaseLocalSearch();
 		return localSearch.doSearch(this,
 		                            (LocalSearchObjective<TestChromosome>) objective);
 	}
@@ -302,8 +299,8 @@ public class TestChromosome extends ExecutableChromosome {
 			changed = true;
 		}
 
-		int lastPosition = getLastMutatableStatement();
 		if(Properties.CHOP_MAX_LENGTH && size() >= Properties.CHROMOSOME_LENGTH) {
+			int lastPosition = getLastMutatableStatement();
 			test.chop(lastPosition + 1);
 		}
 
@@ -373,7 +370,8 @@ public class TestChromosome extends ExecutableChromosome {
 				List<Type> missing = fms.updateMockedMethods();
 				int pos = st.getPosition();
 				logger.debug("Generating parameters for mock call");
-				List<VariableReference> refs = TestFactory.getInstance().satisfyParameters(test, null, missing, pos, 0, true, false,true);
+				// Added 'null' as additional parameter - fix for @NotNull annotations issue on evo mailing list
+				List<VariableReference> refs = TestFactory.getInstance().satisfyParameters(test, null, missing,null, pos, 0, true, false,true);
 				fms.addMissingInputs(refs);
 			} catch (Exception e){
 				//shouldn't really happen because, in the worst case, we could create mocks for missing parameters
@@ -538,7 +536,7 @@ public class TestChromosome extends ExecutableChromosome {
 	 *
 	 * @return
 	 */
-	private boolean mutationInsert() {
+	public boolean mutationInsert() {
 		boolean changed = false;
 		final double ALPHA = Properties.P_STATEMENT_INSERTION; //0.5;
 		int count = 0;
@@ -595,7 +593,7 @@ public class TestChromosome extends ExecutableChromosome {
 		        + " target branches");
 
 		// Try to solve negated constraint
-		TestCase newTest = ConcolicMutation.negateCondition(branch, test);
+		TestCase newTest = ConcolicMutation.negateCondition(branches, branch, test);
 
 		// If successful, add resulting test to test suite
 		if (newTest != null) {

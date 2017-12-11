@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2016 Gordon Fraser, Andrea Arcuri and EvoSuite
+ * Copyright (C) 2010-2017 Gordon Fraser, Andrea Arcuri and EvoSuite
  * contributors
  *
  * This file is part of EvoSuite.
@@ -21,6 +21,7 @@ package org.evosuite;
 
 import org.evosuite.classpath.ClassPathHandler;
 import org.evosuite.lm.MutationType;
+import org.evosuite.regression.RegressionMeasure;
 import org.evosuite.runtime.LoopCounter;
 import org.evosuite.runtime.Runtime;
 import org.evosuite.runtime.RuntimeSettings;
@@ -172,6 +173,10 @@ public class Properties {
 	@DoubleValue(min = 0.0, max = 1.0)
 	public static double DYNAMIC_POOL = 0.5;
 
+	@Parameter(key = "variable_pool", group = "Test Creation", description = "Set probability of a constant based on the number of occurrences")
+	@DoubleValue(min = 0.0, max = 1.0)
+	public static boolean VARIABLE_POOL = false;
+
 	/** Constant <code>DYNAMIC_SEEDING=false</code> */
 	@Deprecated
 	@Parameter(key = "dynamic_seeding", group = "Test Creation", description = "Use numeric dynamic seeding")
@@ -304,7 +309,7 @@ public class Properties {
 
     @Parameter(key = "p_reflection_on_private", group = "Test Creation", description = "Probability [0,1] of using reflection to set private fields or call private methods")
     @DoubleValue(min = 0.0, max = 1.0)
-    public static double P_REFLECTION_ON_PRIVATE = 0.5;
+    public static double P_REFLECTION_ON_PRIVATE = 0.0; // Optimal value: 0.5
 
     @Parameter(key = "reflection_start_percent", group = "Test Creation", description = "Percentage [0,1] of search budget after which reflection fields/methods handling is activated")
     @DoubleValue(min = 0.0, max = 1.0)
@@ -312,7 +317,10 @@ public class Properties {
 
 	@Parameter(key = "p_functional_mocking", group = "Test Creation", description = "Probability [0,1] of using functional mocking (eg Mockito) when creating object instances")
 	@DoubleValue(min = 0.0, max = 1.0)
-	public static double P_FUNCTIONAL_MOCKING = 0.8;
+	public static double P_FUNCTIONAL_MOCKING = 0.0; // Optimal value: 0.8
+
+	@Parameter(key = "mock_if_no_generator", group = "Test Creation", description = "Allow mock objects if there are no generators")
+	public static boolean MOCK_IF_NO_GENERATOR = true;
 
 	@Parameter(key = "functional_mocking_percent", group = "Test Creation", description = "Percentage [0,1] of search budget after which functional mocking can be activated. Mocking of missing concrete classes will be activated immediately regardless of this parameter")
 	@DoubleValue(min = 0.0, max = 1.0)
@@ -326,8 +334,18 @@ public class Properties {
 	// ---------------------------------------------------------------
 	// Search algorithm
 	public enum Algorithm {
-		STANDARDGA, MONOTONICGA, ONEPLUSONEEA, STEADYSTATEGA, RANDOM, NSGAII, MOSA
+		STANDARDGA, MONOTONICGA, ONEPLUSONEEA, MUPLUSLAMBDAEA, STEADYSTATEGA, RANDOM, NSGAII, MOSA, SPEA2, ONEPLUSLAMBDALAMBDAGA, BREEDERGA
 	}
+
+	// MOSA PROPERTIES
+	public enum RankingType {
+		// Preference sorting is the ranking strategy proposed in
+		PREFERENCE_SORTING, 
+		FAST_NON_DOMINATED_SORTING
+	}
+
+	@Parameter(key = "ranking_type", group = "Runtime", description = "type of ranking to use in MOSA")
+	public static RankingType RANKING_TYPE = RankingType.PREFERENCE_SORTING;
 
 	/** Constant <code>ALGORITHM</code> */
 	@Parameter(key = "algorithm", group = "Search Algorithm", description = "Search algorithm")
@@ -390,7 +408,7 @@ public class Properties {
 	public static int DSE_VARIABLE_RESETS = 2;
 
 	public enum DSEType {
-		/** apply DSE per primitive */
+		/** apply DSE per statement */
 		STATEMENT,
 		/** apply DSE with all primitives in a test */
 		TEST,
@@ -432,6 +450,7 @@ public class Properties {
     @DoubleValue(min = 0.0, max = 1.0)
 	public static double LOCAL_SEARCH_PROBABILITY = 1.0;
 
+	@Deprecated
 	@Parameter(key = "local_search_selective", group = "Local Search", description = "Apply local search only to individuals that changed fitness")
 	public static boolean LOCAL_SEARCH_SELECTIVE = false;
 
@@ -448,7 +467,7 @@ public class Properties {
 	public static boolean LOCAL_SEARCH_RESTORE_COVERAGE = false; // Not needed with archive
 
 	@Parameter(key = "local_search_adaptation_rate", group = "Local Search", description = "Parameter used to adapt at runtime the probability of applying local search")
-	public static double LOCAL_SEARCH_ADAPTATION_RATE = 0.33;
+	public static double LOCAL_SEARCH_ADAPTATION_RATE = 2.0;
 
 	@Parameter(key = "local_search_budget", group = "Local Search", description = "Maximum budget usable for improving individuals per local search")
 	public static long LOCAL_SEARCH_BUDGET = 5;
@@ -496,6 +515,10 @@ public class Properties {
 	@DoubleValue(min = 0.0, max = 1.0)
 	public static double MUTATION_RATE = 0.75;
 
+	@Parameter(key = "breeder_truncation", group = "Search Algorithm", description = "Percentage of population to use for breeding in breeder GA")
+	@DoubleValue(min = 0.01, max = 1.0)
+	public static double TRUNCATION_RATE = 0.5;
+
 	/** Constant <code>NUMBER_OF_MUTATIONS=1</code> */
 	@Parameter(key = "number_of_mutations", group = "Search Algorithm", description = "Number of single mutations applied on an individual when a mutation event occurs")
 	public static int NUMBER_OF_MUTATIONS = 1;
@@ -511,7 +534,7 @@ public class Properties {
 	public static double P_STATEMENT_INSERTION = 0.5;
 
 	/** Constant <code>P_CHANGE_PARAMETER=0.1</code> */
-	@Parameter(key = "p_change_parameter", group = "Search Algorithm", description = "Initial probability of inserting a new statement in a test case")
+	@Parameter(key = "p_change_parameter", group = "Search Algorithm", description = "Probability of replacing parameters when mutating a method or constructor statementa in a test case")
     @DoubleValue(min = 0.0, max = 1.0)
 	public static double P_CHANGE_PARAMETER = 0.1;
 
@@ -539,6 +562,14 @@ public class Properties {
 	@Parameter(key = "elite", group = "Search Algorithm", description = "Elite size for search algorithm")
 	public static int ELITE = 1;
 
+	/** Constant <code>MU=1</code> */
+    @Parameter(key = "mu", group = "Search Algorithm", description = "Number of individuals selected by Mu + Lambda EA for the next generation")
+    public static int MU = 1;
+
+    /** Constant <code>LAMBDA=1</code> */
+    @Parameter(key = "lambda", group = "Search Algorithm", description = "Number of individuals produced by Mu + Lambda EA at each generation")
+    public static int LAMBDA = 1;
+
 	/** Constant <code>TOURNAMENT_SIZE=10</code> */
 	@Parameter(key = "tournament_size", group = "Search Algorithm", description = "Number of individuals for tournament selection")
 	public static int TOURNAMENT_SIZE = 10;
@@ -564,6 +595,11 @@ public class Properties {
 	/** Constant <code>POPULATION_LIMIT</code> */
 	@Parameter(key = "population_limit", group = "Search Algorithm", description = "What to use as limit for the population size")
 	public static PopulationLimit POPULATION_LIMIT = PopulationLimit.INDIVIDUALS;
+
+	/** Constant <code>WRITE_INDIVIDUALS=false</code> */
+	@Parameter(key = "write_individuals", group = "Search Algorithm",
+	    description = "Write to a file all fitness values of each individual on each iteration of a GA")
+	public static boolean WRITE_INDIVIDUALS = false;
 
 	/** Constant <code>SEARCH_BUDGET=60</code> */
 	@Parameter(key = "search_budget", group = "Search Algorithm", description = "Maximum search duration")
@@ -591,7 +627,7 @@ public class Properties {
 	public static StoppingCondition STOPPING_CONDITION = StoppingCondition.MAXTIME;
 
 	public enum CrossoverFunction {
-		SINGLEPOINTRELATIVE, SINGLEPOINTFIXED, SINGLEPOINT, COVERAGE
+		SINGLEPOINTRELATIVE, SINGLEPOINTFIXED, SINGLEPOINT, COVERAGE, UNIFORM
 	}
 
 	/** Constant <code>CROSSOVER_FUNCTION</code> */
@@ -630,6 +666,14 @@ public class Properties {
 	/** Constant <code>SELECTION_FUNCTION</code> */
 	@Parameter(key = "selection_function", group = "Search Algorithm", description = "Selection function during search")
 	public static SelectionFunction SELECTION_FUNCTION = SelectionFunction.RANK;
+
+	public enum MutationProbabilityDistribution {
+		UNIFORM, BINOMIAL
+	}
+
+	/** Constant <code>MUTATION_PROBABILITY_DISTRIBUTION</code> */
+	@Parameter(key = "mutation_probability_distribution", group = "Search Algorithm", description = "Mutation probability distribution")
+	public static MutationProbabilityDistribution MUTATION_PROBABILITY_DISTRIBUTION = MutationProbabilityDistribution.UNIFORM;
 
 	// TODO: Fix values
 	/** Constant <code>SECONDARY_OBJECTIVE="totallength"</code> */
@@ -671,6 +715,12 @@ public class Properties {
     @Parameter(key = "assertion_timeout", group = "Search Algorithm", description = "Seconds allowed for assertion generation at the end")
     @IntValue(min = 0)
     public static int ASSERTION_TIMEOUT = 60;
+
+    @Parameter(key="assertion_minimization_fallback", group = "Search Algorithm", description = "Percentage of tests expected to have assertions at fallback check time")
+    public static double ASSERTION_MINIMIZATION_FALLBACK = 1/2d;
+
+	@Parameter(key="assertion_minimization_fallback_time", group = "Search Algorithm", description = "Percentage of tests applied to minimisation before checking fallback. 1.0 for no fallback.")
+	public static double ASSERTION_MINIMIZATION_FALLBACK_TIME = 2/3d;
 
 	@Parameter(key = "junit_check_timeout", group = "Search Algorithm", description = "Seconds allowed for checking the generated JUnit files (e.g., compilation and stability)")
 	@IntValue(min = 0)
@@ -888,6 +938,9 @@ public class Properties {
 	@Parameter(key = "junit_suffix", group = "Output", description = "Suffix that is appended at each generated JUnit file name")
 	public static String JUNIT_SUFFIX = "_ESTest";
 
+	@Parameter(key = "junit_failed_suffix", group = "Output", description = "Suffix that is appended at each generated JUnit file name for failing tests")
+	public static String JUNIT_FAILED_SUFFIX = "_Failed_ESTest";
+
 	//WARN: do not change this value, as had to be hardcoded in quite a few places :( if really need to change it,
 	// all that code has to be changed as well
 	@Parameter(key = "scaffolding_suffix", group = "Output", description = "Suffix used to specify scaffolding files")
@@ -1081,6 +1134,9 @@ public class Properties {
 
 	@Parameter(key = "new_statistics", group = "Output", description = "Use the new statistics backend on the master")
 	public static boolean NEW_STATISTICS = true;
+	
+	@Parameter(key = "ignore_missing_statistics", group = "Output", description = "Return an empty string for missing output variables")
+	public static boolean IGNORE_MISSING_STATISTICS = false;
 
 	@Parameter(key = "float_precision", group = "Output", description = "Precision to use in float comparisons and assertions")
 	public static float FLOAT_PRECISION = 0.01F;
@@ -1153,7 +1209,7 @@ public class Properties {
     public static boolean VIRTUAL_NET = true;
 
     @Parameter(key = "use_separate_classloader", group = "Sandbox", description = "Usa a separate classloader in the final test cases")
-    public static boolean USE_SEPARATE_CLASSLOADER = false;
+    public static boolean USE_SEPARATE_CLASSLOADER = true;
 
 
     // ---------------------------------------------------------------
@@ -1168,6 +1224,12 @@ public class Properties {
 
 	@Parameter(key = "cluster_recursion", description = "The maximum level of recursion when calculating the dependencies in the test cluster")
 	public static int CLUSTER_RECURSION = 10;
+
+	@Parameter(key = "sort_calls", description = "Sort SUT methods by remaining coverage to bias search towards uncovered parts")
+	public static boolean SORT_CALLS = false;
+
+	@Parameter(key = "sort_objects", description = "Sort objects in a test to make calls on objects closer to SUT more likely")
+	public static boolean SORT_OBJECTS = false;
 
 	/** Constant <code>INHERITANCE_FILE=""</code> */
 	@Parameter(key = "inheritance_file", description = "Cached version of inheritance tree")
@@ -1314,6 +1376,9 @@ public class Properties {
 	/** Constant <code>CHECK_CONTRACTS_END=false</code> */
 	@Parameter(key = "check_contracts_end", description = "Check contracts only once per test")
 	public static boolean CHECK_CONTRACTS_END = false;
+
+	@Parameter(key = "catch_undeclared_exceptions", description = "Use try/catch block for undeclared exceptions")
+	public static boolean CATCH_UNDECLARED_EXCEPTIONS = true;
 
 	@Parameter(key = "junit_theories", description = "Check JUnit theories as contracts")
 	public static String JUNIT_THEORIES = "";
@@ -1519,9 +1584,7 @@ public class Properties {
 	public static boolean EXCLUDE_IBRANCHES_CUT = false;
 
 
-	public enum Strategy {
-		ONEBRANCH, EVOSUITE, RANDOM, RANDOM_FIXED, ENTBUG, REGRESSION, REGRESSIONTESTS, MOSUITE, DSE
-	}
+	/*** Evosuite regression testing properties ***/
 	
 	/** Constant <code>REGRESSIONCP</code> */
 	@Parameter(key = "regressioncp", group = "Runtime", description = "Regression testing classpath")
@@ -1540,12 +1603,17 @@ public class Properties {
 	public static int REGRESSION_ANALYSIS_OBJECTDISTANCE = 0;
 	
 	/** Constant <code>REGRESSION_DIFFERENT_BRANCHES</code> */
+	@Deprecated
 	@Parameter(key = "regression_different_branches", group = "Runtime", description = "Classes under test have different branch orders")
 	public static boolean REGRESSION_DIFFERENT_BRANCHES = false;
 	
-	/** Constant <code>REGRESSION_USE_FITNESS</code> */
-	@Parameter(key = "regression_use_fitness", group = "Runtime", description = "Which fitness values will be used")
-	public static int REGRESSION_USE_FITNESS = 4;
+	/** Constant <code>REGRESSION_BRANCH_DISTANCE</code> */
+    @Parameter(key = "regression_branch_distance", group = "Runtime", description = "Enable control-flow distance measurement for regression testing")
+    public static boolean REGRESSION_BRANCH_DISTANCE = false;
+	
+	/** Constant <code>REGRESSION_FITNESS</code> */
+    @Parameter(key = "regression_fitness", group = "Runtime", description = "Set fitness function for EvosuiteR. [Defaults to Random search]")
+    public static RegressionMeasure REGRESSION_FITNESS = RegressionMeasure.RANDOM;
 	
 	/** Constant <code>REGRESSION_ANALYZE</code> */
 	@Parameter(key = "regression_analyze", group = "Runtime", description = "Analyze the classes under test, to ensure the effectiveness of evosuite")
@@ -1563,6 +1631,27 @@ public class Properties {
 	@Parameter(key = "regression_diversity", group = "Runtime", description = "Include diversity fitness measurement")
 	public static boolean REGRESSION_DIVERSITY = false;
 
+	/** Constant <code>REGRESSION_SKIP_SIMILAR</code> */
+    @Parameter(key = "regression_skip_similar", group = "Runtime", description = "Skip running EvosuiteR on similar classes")
+    public static boolean REGRESSION_SKIP_SIMILAR = false;
+    
+    /** Constant <code>REGRESSION_SKIP_DIFFERENT_CFG</code> */
+    @Parameter(key = "regression_skip_different_cfg", group = "Runtime", description = "Skip running EvosuiteR on classes with different control-flow-graph")
+    public static boolean REGRESSION_SKIP_DIFFERENT_CFG = false;
+    
+    /** Constant <code>REGRESSION_STATISTICS</code> */
+    @Parameter(key = "regression_statistics", group = "Runtime", description = "Track extra search statistics during regression testing")
+    public static boolean REGRESSION_STATISTICS = false;
+
+	/** Constant <code>KEEP_REGRESSION_ARCHIVE</code> */
+	@Parameter(key = "keep_regression_archive", group = "Runtime", description = "Keep an archive of regression tests")
+	public static boolean KEEP_REGRESSION_ARCHIVE = false;
+	
+	
+	public enum Strategy {
+	    ONEBRANCH, EVOSUITE, RANDOM, RANDOM_FIXED, ENTBUG, REGRESSION, MOSUITE, DSE, NOVELTY
+	}
+	
 	/** Constant <code>STRATEGY</code> */
 	@Parameter(key = "strategy", group = "Runtime", description = "Which mode to use")
 	public static Strategy STRATEGY = Strategy.EVOSUITE;
@@ -1589,9 +1678,6 @@ public class Properties {
 	@Parameter(key = "min_free_mem", group = "Runtime", description = "Minimum amount of available memory")
 	public static int MIN_FREE_MEM = 50 * 1000 * 1000;
 
-
-	@Parameter(key = "max_perm_size", group = "Runtime", description = "MaxPermSize (in MB) for the client process")
-	public static int MAX_PERM_SIZE = 256;
 
 	/** Constant <code>CLIENT_ON_THREAD=false</code> */
 	@Parameter(key = "client_on_thread", group = "Runtime", description = "Run client process on same JVM of master in separate thread. To be used only for debugging purposes")
@@ -1620,6 +1706,11 @@ public class Properties {
 	/** Constant <code>ECLIPSE_PLUGIN=false</code> */
 	@Parameter(key = "eclipse_plugin", group = "Plugin", description = "Running plugin for experiments. Use EvoSuiteTest annotation and decorate generated tests with (checked = false).")
 	public static boolean ECLIPSE_PLUGIN = false;
+	
+	// Added - fix for @NotNull annotations issue on evo mailing list
+
+	@Parameter(key = "honour_data_annotations", group = "Runtime", description = "Allows EvoSuite to generate tests with or without honouring the parameter data annotations")
+	public static boolean HONOUR_DATA_ANNOTATIONS = true;
 
 	/**
 	 * Get all parameters that are available
@@ -2219,7 +2310,7 @@ public class Properties {
 	 *            a {@link java.lang.String} object.
 	 * @param value
 	 *            an array of {@link java.lang.String} objects.
-	 * @throws org.evosuite.Properties#NoSuchParameterException
+	 * @throws org.evosuite.Properties.NoSuchParameterException
 	 *             if any.
 	 * @throws java.lang.IllegalArgumentException
 	 *             if any.
@@ -2419,7 +2510,7 @@ public class Properties {
 					TestGenerationContext.getInstance().getClassLoaderForSUT());
 			
 
-			if (STRATEGY == Strategy.REGRESSION || STRATEGY == Strategy.REGRESSIONTESTS) {
+			if (STRATEGY == Strategy.REGRESSION) {
 				TARGET_REGRESSION_CLASS_INSTANCE = Class.forName(TARGET_CLASS, initialise,
                         TestGenerationContext.getInstance().getRegressionClassLoaderForSUT());
 			}
@@ -2537,7 +2628,7 @@ public class Properties {
 	 * whether or not the regression mode is running
 	 */
 	public static boolean isRegression(){
-		boolean isRegression = (STRATEGY == Strategy.REGRESSION || STRATEGY == Strategy.REGRESSIONTESTS);
+		boolean isRegression = (STRATEGY == Strategy.REGRESSION);
 		return isRegression;
 	}
 

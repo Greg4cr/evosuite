@@ -1,6 +1,4 @@
 /**
- * Copyright (C) 2010-2016 Gordon Fraser, Andrea Arcuri and EvoSuite
- * contributors
  *
  * This file is part of EvoSuite.
  *
@@ -20,18 +18,20 @@
 package org.evosuite.ga.metaheuristics.mosa;
 
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 
 import org.evosuite.ga.Chromosome;
 import org.evosuite.ga.FitnessFunction;
 
 /**
  * Interface for ranking algorithms
- * @author Annibale, Fitusm
+ * @author Annibale Panichella, Fitsum M. Kifetew
  *
  * @param <T>
  */
 public interface Ranking<T extends Chromosome> {
+	
+	public void computeRankingAssignment(List<T> solutions, Set<FitnessFunction<T>> uncovered_goals);
 
 	/**
 	 * Returns a <code>list of chromosome</code> containing the solutions of a given rank.
@@ -47,8 +47,4 @@ public interface Ranking<T extends Chromosome> {
 	 */
 	public int getNumberOfSubfronts(); // getNumberOfSubfronts
 
-	/**
-	 * Returns the covered goals and the corresponding covering test cases
-	 */
-	public Map<FitnessFunction<T>, T> getNewCoveredGoals();
 }

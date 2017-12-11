@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2016 Gordon Fraser, Andrea Arcuri and EvoSuite
+ * Copyright (C) 2010-2017 Gordon Fraser, Andrea Arcuri and EvoSuite
  * contributors
  *
  * This file is part of EvoSuite.
@@ -313,6 +313,8 @@ public class CBranchSuiteFitness extends TestSuiteFitnessFunction {
 
 		if (!branchGoals.isEmpty()) {
 			suite.setCoverage(this, (double) numCoveredGoals / (double) branchGoals.size());
+		} else {
+			suite.setCoverage(this, 1);
 		}
 		suite.setNumOfCoveredGoals(this, numCoveredGoals);
 		suite.setNumOfNotCoveredGoals(this, branchGoals.size() - numCoveredGoals);

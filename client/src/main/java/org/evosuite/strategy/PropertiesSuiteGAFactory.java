@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2016 Gordon Fraser, Andrea Arcuri and EvoSuite
+ * Copyright (C) 2010-2017 Gordon Fraser, Andrea Arcuri and EvoSuite
  * contributors
  *
  * This file is part of EvoSuite.
@@ -30,19 +30,13 @@ import org.evosuite.coverage.archive.TestsArchive;
 import org.evosuite.coverage.branch.BranchPool;
 import org.evosuite.coverage.mutation.MutationTestPool;
 import org.evosuite.coverage.mutation.MutationTimeoutStoppingCondition;
+import org.evosuite.coverage.rho.RhoTestSuiteSecondaryObjective;
 import org.evosuite.ga.ChromosomeFactory;
 import org.evosuite.ga.FitnessReplacementFunction;
-import org.evosuite.ga.MinimizeSizeSecondaryObjective;
-import org.evosuite.coverage.ibranch.IBranchSecondaryObjective;
 import org.evosuite.ga.SecondaryObjective;
-import org.evosuite.ga.metaheuristics.GeneticAlgorithm;
-import org.evosuite.ga.metaheuristics.RandomSearch;
-import org.evosuite.ga.metaheuristics.SteadyStateGA;
-import org.evosuite.ga.metaheuristics.NSGAII;
+import org.evosuite.coverage.ibranch.IBranchSecondaryObjective;
+import org.evosuite.ga.metaheuristics.*;
 import org.evosuite.ga.metaheuristics.mosa.MOSA;
-import org.evosuite.ga.metaheuristics.OnePlusOneEA;
-import org.evosuite.ga.metaheuristics.StandardGA;
-import org.evosuite.ga.metaheuristics.MonotonicGA;
 import org.evosuite.regression.RegressionTestChromosomeFactory;
 import org.evosuite.regression.RegressionTestSuiteChromosomeFactory;
 import org.evosuite.statistics.StatisticsListener;
@@ -50,6 +44,7 @@ import org.evosuite.ga.operators.crossover.CrossOverFunction;
 import org.evosuite.ga.operators.crossover.SinglePointCrossOver;
 import org.evosuite.ga.operators.crossover.SinglePointFixedCrossOver;
 import org.evosuite.ga.operators.crossover.SinglePointRelativeCrossOver;
+import org.evosuite.ga.operators.crossover.UniformCrossOver;
 import org.evosuite.ga.operators.selection.BinaryTournamentSelectionCrowdedComparison;
 import org.evosuite.ga.operators.selection.FitnessProportionateSelection;
 import org.evosuite.ga.operators.selection.RankSelection;
@@ -68,6 +63,7 @@ import org.evosuite.testcase.localsearch.BranchCoverageMap;
 import org.evosuite.testsuite.secondaryobjectives.MinimizeAverageLengthSecondaryObjective;
 import org.evosuite.testsuite.secondaryobjectives.MinimizeExceptionsSecondaryObjective;
 import org.evosuite.testsuite.secondaryobjectives.MinimizeMaxLengthSecondaryObjective;
+import org.evosuite.testsuite.secondaryobjectives.MinimizeSizeSecondaryObjective;
 import org.evosuite.testsuite.secondaryobjectives.MinimizeTotalLengthSecondaryObjective;
 import org.evosuite.testsuite.RelativeSuiteLengthBloatControl;
 import org.evosuite.testsuite.factories.SerializationSuiteChromosomeFactory;
@@ -137,6 +133,15 @@ public class PropertiesSuiteGAFactory extends PropertiesSearchAlgorithmFactory<T
 
 				return ga;
 			}
+		case MUPLUSLAMBDAEA:
+		    logger.info("Chosen search algorithm: (Mu+Lambda)EA");
+            {
+                MuPlusLambdaEA<TestSuiteChromosome> ga = new MuPlusLambdaEA<TestSuiteChromosome>(factory, Properties.MU, Properties.LAMBDA);
+                if (Properties.TEST_ARCHIVE)
+                    ga.setArchive(TestsArchive.instance);
+
+                return ga;
+            }
 		case MONOTONICGA:
 			logger.info("Chosen search algorithm: SteadyStateGA");
 			{
@@ -169,6 +174,15 @@ public class PropertiesSuiteGAFactory extends PropertiesSearchAlgorithmFactory<T
 				}
 				return ga;
 			}
+		case BREEDERGA:
+			logger.info("Chosen search algorithm: MuPlusLambdaGA");
+		{
+			BreederGA<TestSuiteChromosome> ga = new BreederGA<>(factory);
+			if (Properties.TEST_ARCHIVE)
+				ga.setArchive(TestsArchive.instance);
+
+			return ga;
+		}
 		case RANDOM:
 			logger.info("Chosen search algorithm: Random");
 			{
@@ -181,9 +195,21 @@ public class PropertiesSuiteGAFactory extends PropertiesSearchAlgorithmFactory<T
         case NSGAII:
             logger.info("Chosen search algorithm: NSGAII");
             return new NSGAII<TestSuiteChromosome>(factory);
+        case SPEA2:
+            logger.info("Chosen search algorithm: SPEA2");
+            return new SPEA2<TestSuiteChromosome>(factory);
         case MOSA:
         	logger.info("Chosen search algorithm: MOSA");
             return new MOSA<TestSuiteChromosome>(factory);
+        case ONEPLUSLAMBDALAMBDAGA:
+            logger.info("Chosen search algorithm: 1 + (lambda, lambda)GA");
+            {
+              OnePlusLambdaLambdaGA<TestSuiteChromosome> ga = new OnePlusLambdaLambdaGA<TestSuiteChromosome>(factory);
+              if (Properties.TEST_ARCHIVE) {
+                ga.setArchive(TestsArchive.instance);
+              }
+              return ga;
+            }
 		default:
 			logger.info("Chosen search algorithm: StandardGA");
             {
@@ -222,6 +248,8 @@ public class PropertiesSuiteGAFactory extends PropertiesSearchAlgorithmFactory<T
 				        "Coverage crossover function requires test suite mode");
 
 			return new org.evosuite.ga.operators.crossover.CoverageCrossOver();
+		case UNIFORM:
+			return new UniformCrossOver();
 		default:
 			throw new RuntimeException("Unknown crossover function: "
 			        + Properties.CROSSOVER_FUNCTION);
@@ -239,7 +267,7 @@ public class PropertiesSuiteGAFactory extends PropertiesSearchAlgorithmFactory<T
 	 */
 	protected SecondaryObjective<TestSuiteChromosome> getSecondarySuiteObjective(String name) {
 		if (name.equalsIgnoreCase("size"))
-			return new MinimizeSizeSecondaryObjective<>();
+			return new MinimizeSizeSecondaryObjective();
 		else if (name.equalsIgnoreCase("ibranch"))
 			return new IBranchSecondaryObjective();
 		else if (name.equalsIgnoreCase("archiveibranch"))
@@ -252,6 +280,8 @@ public class PropertiesSuiteGAFactory extends PropertiesSearchAlgorithmFactory<T
 			return new MinimizeExceptionsSecondaryObjective();
 		else if (name.equalsIgnoreCase("totallength"))
 			return new MinimizeTotalLengthSecondaryObjective();
+		else if (name.equalsIgnoreCase("rho"))
+			return new RhoTestSuiteSecondaryObjective();
 		else
 			throw new RuntimeException("ERROR: asked for unknown secondary objective \""
 			        + name + "\"");

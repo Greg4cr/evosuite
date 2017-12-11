@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2016 Gordon Fraser, Andrea Arcuri and EvoSuite
+ * Copyright (C) 2010-2017 Gordon Fraser, Andrea Arcuri and EvoSuite
  * contributors
  *
  * This file is part of EvoSuite.
@@ -55,7 +55,6 @@ public class MOSuiteStrategy extends TestGenerationStrategy {
 		// Set up search algorithm
 		PropertiesSuiteGAFactory algorithmFactory = new PropertiesSuiteGAFactory();
 
-		Properties.ALGORITHM = Algorithm.MOSA;
 		GeneticAlgorithm<TestSuiteChromosome> algorithm = algorithmFactory.getSearchAlgorithm();
 		
 		// Override chromosome factory
@@ -99,8 +98,7 @@ public class MOSuiteStrategy extends TestGenerationStrategy {
 			ExecutionTracer.enableTraceCalls();
 
 		algorithm.resetStoppingConditions();
-
-		ClientServices.getInstance().getClientNode().trackOutputVariable(RuntimeVariable.Total_Goals, fitnessFunctions.size());
+		
 		TestSuiteChromosome testSuite = null;
 
 		if (!(Properties.STOP_ZERO && fitnessFunctions.isEmpty()) || ArrayUtil.contains(Properties.CRITERION, Criterion.EXCEPTION)) {
@@ -146,6 +144,12 @@ public class MOSuiteStrategy extends TestGenerationStrategy {
 		// Search is finished, send statistics
 		sendExecutionStatistics();
 
+		// We send the info about the total number of coverage goals/targets only after 
+		// the end of the search. This is because the number of coverage targets may vary
+		// when the criterion Properties.Criterion.EXCEPTION is used (exception coverage
+		// goal are dynamically added when the generated tests trigger some exceptions
+		ClientServices.getInstance().getClientNode().trackOutputVariable(RuntimeVariable.Total_Goals, algorithm.getFitnessFunctions().size());
+		
 		return testSuite;
 	}
 	

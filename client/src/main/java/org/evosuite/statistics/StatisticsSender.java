@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2016 Gordon Fraser, Andrea Arcuri and EvoSuite
+ * Copyright (C) 2010-2017 Gordon Fraser, Andrea Arcuri and EvoSuite
  * contributors
  *
  * This file is part of EvoSuite.
@@ -182,6 +182,6 @@ public class StatisticsSender {
 		ClientServices.getInstance().getClientNode().trackOutputVariable(
 				RuntimeVariable.Covered_Branches_Instrumented, coveredInstrumentedBranches.size());
 		ClientServices.getInstance().getClientNode().trackOutputVariable(
-				RuntimeVariable.Covered_Lines, coveredLines);
+				RuntimeVariable.Covered_Lines, coveredLines.size());
 	}
 }

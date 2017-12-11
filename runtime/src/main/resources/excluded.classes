@@ -18,11 +18,10 @@ lombok.
 java.
 javax.
 javafx.
-jdk.internal.
+jdk.
 junit.framework.
 major.mutation.
 net.sourceforge.cobertura.
-org.apache.log4j.
 org.apache.commons.discovery.tools.DiscoverSingleton
 org.apache.commons.discovery.resource.ClassLoaders
 org.apache.commons.discovery.resource.classes.DiscoverClasses
@@ -33,8 +32,7 @@ org.apache.lucene.analysis.util.CharFilterFactory
 org.apache.maven.
 org.apache.struts.util.MessageResources
 org.apache.tools.ant.
-org.apache.xerces.dom3.
-org.dom4j.DefaultDocumentFactory
+org.apache.xerces.
 org.exsyst.
 org.jacoco.
 org.jcp.xml.dsig.internal.dom.

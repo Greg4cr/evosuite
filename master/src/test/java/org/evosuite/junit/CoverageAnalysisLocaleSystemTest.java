@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2016 Gordon Fraser, Andrea Arcuri and EvoSuite
+ * Copyright (C) 2010-2017 Gordon Fraser, Andrea Arcuri and EvoSuite
  * contributors
  *
  * This file is part of EvoSuite.
@@ -72,9 +72,9 @@ public class CoverageAnalysisLocaleSystemTest extends SystemTestBase {
 
         Map<String, OutputVariable<?>> outputVariables = statistics.getOutputVariables();
 
-        assertEquals(9, (Integer) outputVariables.get(RuntimeVariable.Total_Goals.name()).getValue(), 0.0);
+        assertEquals(10, (Integer) outputVariables.get(RuntimeVariable.Total_Goals.name()).getValue(), 0.0);
         assertEquals(8, (Integer) outputVariables.get(RuntimeVariable.Covered_Goals.name()).getValue(), 0.0);
-        assertEquals(8.0 / 9.0, (Double) outputVariables.get(RuntimeVariable.LineCoverage.name()).getValue(), 0.0);
+        assertEquals(8.0 / 10.0, (Double) outputVariables.get(RuntimeVariable.LineCoverage.name()).getValue(), 0.0);
         assertEquals(1, (Integer) outputVariables.get(RuntimeVariable.Tests_Executed.name()).getValue(), 0.0);
 
         // check coverage matrix

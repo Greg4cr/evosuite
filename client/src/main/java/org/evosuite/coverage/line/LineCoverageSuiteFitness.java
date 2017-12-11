@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2016 Gordon Fraser, Andrea Arcuri and EvoSuite
+ * Copyright (C) 2010-2017 Gordon Fraser, Andrea Arcuri and EvoSuite
  * contributors
  *
  * This file is part of EvoSuite.
@@ -19,12 +19,7 @@
  */
 package org.evosuite.coverage.line;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.Map.Entry;
 
 import org.evosuite.Properties;
@@ -65,18 +60,19 @@ public class LineCoverageSuiteFitness extends TestSuiteFitnessFunction {
 		String prefix = Properties.TARGET_CLASS_PREFIX;
 
 		/* TODO: Would be nice to use a prefix here */
-		for(String className : LinePool.getKnownClasses()) {		
-			lines.addAll(LinePool.getLines(className));
-		}
-		logger.info("Total line coverage goals: " + lines);
+//		for(String className : LinePool.getKnownClasses()) {
+//			lines.addAll(LinePool.getLines(className));
+//		}
 
 		List<LineCoverageTestFitness> goals = new LineCoverageFactory().getCoverageGoals();
 		for (LineCoverageTestFitness goal : goals) {
+			lines.add(goal.getLine());
 			linesCoverageMap.put(goal.getLine(), goal);
 			if(Properties.TEST_ARCHIVE)
 				TestsArchive.instance.addGoalToCover(this, goal);
 		}
-		
+		logger.info("Total line coverage goals: " + lines);
+
 		initializeControlDependencies();
 	}
 	
@@ -248,7 +244,12 @@ public class LineCoverageSuiteFitness extends TestSuiteFitnessFunction {
 			targetClasses.add(ff.getTargetClass());
 		}
 		for(String className : targetClasses) {
-			for(BytecodeInstruction bi : BytecodeInstructionPool.getInstance(TestGenerationContext.getInstance().getClassLoaderForSUT()).getInstructionsIn(className)) {
+			List<BytecodeInstruction> instructions = BytecodeInstructionPool.getInstance(TestGenerationContext.getInstance().getClassLoaderForSUT()).getInstructionsIn(className);
+			if(instructions == null) {
+				logger.info("No instructions known for class {} (is it an enum?)", className);
+				continue;
+			}
+			for(BytecodeInstruction bi : instructions) {
 				if(bi.getBasicBlock() == null) {
 					// Labels get no basic block. TODO - why?
 					continue;

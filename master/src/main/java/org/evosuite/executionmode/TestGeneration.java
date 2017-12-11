@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2016 Gordon Fraser, Andrea Arcuri and EvoSuite
+ * Copyright (C) 2010-2017 Gordon Fraser, Andrea Arcuri and EvoSuite
  * contributors
  *
  * This file is part of EvoSuite.
@@ -35,6 +35,7 @@ import org.evosuite.result.TestGenerationResultBuilder;
 import org.evosuite.rmi.MasterServices;
 import org.evosuite.rmi.service.ClientNodeRemote;
 import org.evosuite.runtime.util.JarPathing;
+import org.evosuite.runtime.util.JavaExecCmdUtil;
 import org.evosuite.statistics.SearchStatistics;
 import org.evosuite.utils.ExternalProcessHandler;
 import org.evosuite.utils.LoggingUtils;
@@ -136,8 +137,6 @@ public class TestGeneration {
 			strategy = Strategy.RANDOM;
 		} else if (line.hasOption("regressionSuite")) {
 			strategy = Strategy.REGRESSION;
-		} else if (line.hasOption("regressionTests")) {
-			strategy = Strategy.REGRESSIONTESTS;
 		} else if (line.hasOption("generateNumRandom")) {
 			strategy = Strategy.RANDOM_FIXED;
 			javaOpts.add("-Dnum_random_tests="
@@ -146,6 +145,8 @@ public class TestGeneration {
 			strategy = Strategy.MOSUITE;
 		} else if (line.hasOption("generateSuiteUsingDSE")) {
 			strategy = Strategy.DSE;
+		} else if(javaOpts.contains("-Dstrategy="+Strategy.NOVELTY.name())) {
+			strategy = Strategy.NOVELTY;
 		}
 		return strategy;
 	}
@@ -223,7 +224,7 @@ public class TestGeneration {
 		}
 
 		List<String> cmdLine = new ArrayList<>();
-		cmdLine.add(EvoSuite.JAVA_CMD);
+		cmdLine.add(JavaExecCmdUtil.getJavaBinExecutablePath(true)/*EvoSuite.JAVA_CMD*/);
 
 		handleClassPath(cmdLine);
 
@@ -299,6 +300,7 @@ public class TestGeneration {
 			cmdLine.add("-Dcom.sun.management.jmxremote.ssl=false");
 		}
 		cmdLine.add("-XX:MaxJavaStackTraceDepth=1000000");
+		cmdLine.add("-XX:+StartAttachListener");
 
 		for (String arg : args) {
 			if (!arg.startsWith("-DCP=")) {
@@ -322,9 +324,6 @@ public class TestGeneration {
 		case REGRESSION:
 			cmdLine.add("-Dstrategy=Regression");
 			break;
-		case REGRESSIONTESTS:
-			cmdLine.add("-Dstrategy=RegressionTests");
-			break;	
 		case ENTBUG:
 			cmdLine.add("-Dstrategy=EntBug");
 			break;
@@ -333,6 +332,9 @@ public class TestGeneration {
 			break;
 		case DSE:
 			cmdLine.add("-Dstrategy=Dynamic_Symbolic_Execution");
+			break;
+		case NOVELTY:
+			cmdLine.add("-Dstrategy=Novelty");
 			break;
 		default:
 			throw new RuntimeException("Unsupported strategy: " + strategy);

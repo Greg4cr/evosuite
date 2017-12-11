@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2016 Gordon Fraser, Andrea Arcuri and EvoSuite
+ * Copyright (C) 2010-2017 Gordon Fraser, Andrea Arcuri and EvoSuite
  * contributors
  *
  * This file is part of EvoSuite.
@@ -24,13 +24,13 @@ import org.evosuite.PackageInfo;
 import org.evosuite.Properties;
 import org.evosuite.assertion.Assertion;
 import org.evosuite.ga.ConstructionFailedException;
+import org.evosuite.runtime.FalsePositiveException;
 import org.evosuite.runtime.RuntimeSettings;
 import org.evosuite.runtime.classhandling.ClassResetter;
 import org.evosuite.runtime.instrumentation.InstrumentedClass;
 import org.evosuite.runtime.mock.EvoSuiteMock;
 import org.evosuite.runtime.mock.MockList;
 import org.evosuite.runtime.util.AtMostOnceLogger;
-import org.evosuite.setup.TestUsageChecker;
 import org.evosuite.testcase.fm.EvoInvocationListener;
 import org.evosuite.testcase.fm.MethodDescriptor;
 import org.evosuite.runtime.util.Inputs;
@@ -41,13 +41,11 @@ import org.evosuite.testcase.execution.Scope;
 import org.evosuite.testcase.execution.UncompilableCodeException;
 import org.evosuite.testcase.variable.ConstantValue;
 import org.evosuite.testcase.variable.VariableReference;
-import org.evosuite.utils.LoggingUtils;
 import org.evosuite.utils.generic.GenericAccessibleObject;
 import org.evosuite.utils.generic.GenericClass;
 import org.mockito.MockSettings;
 import org.mockito.Mockito;
 import org.mockito.stubbing.OngoingStubbing;
-import org.objectweb.asm.commons.GeneratorAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,6 +54,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
+import java.net.InetSocketAddress;
 import java.util.*;
 
 import static org.mockito.Mockito.mock;
@@ -215,6 +214,14 @@ public class FunctionalMockStatement extends EntityWithParametersStatement {
                 if a class has not been instrumented (eg because belonging to javax.*),
                 then if it is final we cannot mock it :(
                 recall that instrumentation does remove the final modifiers
+             */
+            return false;
+        }
+
+        if(InetSocketAddress.class.equals(rawClass)) {
+            /*
+             InetSocketAddress declares hashCode as final and thus cannot be mocked:
+             https://github.com/mockito/mockito/issues/310
              */
             return false;
         }
@@ -589,7 +596,7 @@ public class FunctionalMockStatement extends EntityWithParametersStatement {
                         InstantiationException, CodeUnderTestException {
 
                     // First create the listener
-                    listener = new EvoInvocationListener(retval.getType());
+                    listener = new EvoInvocationListener(retval.getGenericClass());
 
                     //then create the mock
                     Object ret;
@@ -669,7 +676,8 @@ public class FunctionalMockStatement extends EntityWithParametersStatement {
 
                                     int k = i + index; //the position in flat parameter list
                                     if (k >= parameters.size()) {
-                                        throw new RuntimeException("EvoSuite ERROR: index " + k + " out of " + parameters.size());
+                                        //throw new RuntimeException("EvoSuite ERROR: index " + k + " out of " + parameters.size());
+                                        throw new CodeUnderTestException(new FalsePositiveException("EvoSuite ERROR: index " + k + " out of " + parameters.size()));
                                     }
 
                                     VariableReference parameterVar = parameters.get(i + index);
@@ -806,13 +814,37 @@ public class FunctionalMockStatement extends EntityWithParametersStatement {
                         }
                     }
 
+                    if(expectedType.equals(Short.TYPE)) {
+                        if(valuesClass.equals(Integer.class)){
+                            value = (short) ((Integer)value).intValue();
+                        } else if(valuesClass.equals(Byte.class)){
+                            value = (short) ((Byte)value).intValue();
+                        } else if(valuesClass.equals(Character.class)){
+                            value = (short) ((Character)value).charValue();
+                        } else if(valuesClass.equals(Long.class)){
+                            value = (short) ((Long)value).intValue();
+                        }
+                    }
+
+                    if(expectedType.equals(Byte.TYPE)) {
+                        if(valuesClass.equals(Integer.class)){
+                            value = (byte) ((Integer)value).intValue();
+                        } else if(valuesClass.equals(Byte.class)){
+                            value = (byte) ((Short)value).intValue();
+                        } else if(valuesClass.equals(Character.class)){
+                            value = (byte) ((Character)value).charValue();
+                        } else if(valuesClass.equals(Long.class)){
+                            value = (byte) ((Long)value).intValue();
+                        }
+                    }
+
                     return value;
                 }
 
 
                 @Override
                 public Set<Class<? extends Throwable>> throwableExceptions() {
-                    Set<Class<? extends Throwable>> t = new HashSet<>();
+                    Set<Class<? extends Throwable>> t = new LinkedHashSet<>();
                     t.add(InvocationTargetException.class);
                     return t;
                 }

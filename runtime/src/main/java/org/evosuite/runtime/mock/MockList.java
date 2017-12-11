@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2016 Gordon Fraser, Andrea Arcuri and EvoSuite
+ * Copyright (C) 2010-2017 Gordon Fraser, Andrea Arcuri and EvoSuite
  * contributors
  *
  * This file is part of EvoSuite.
@@ -42,6 +42,7 @@ import org.evosuite.runtime.mock.java.time.chrono.*;
 import org.evosuite.runtime.mock.java.util.*;
 import org.evosuite.runtime.mock.java.util.logging.MockFileHandler;
 import org.evosuite.runtime.mock.java.util.logging.MockLogRecord;
+import org.evosuite.runtime.mock.java.util.prefs.MockPreferences;
 import org.evosuite.runtime.mock.javax.naming.MockInitialContext;
 import org.evosuite.runtime.mock.javax.persistence.MockPersistence;
 import org.evosuite.runtime.mock.javax.swing.MockDefaultListSelectionModel;
@@ -133,6 +134,9 @@ public class MockList {
 			list.add(MockMinguoChronology.class);
 			list.add(MockThaiBuddhistChronology.class);
 			list.add(MockThaiBuddhistDate.class);
+
+			// preferences
+			list.add(MockPreferences.class);
 
 			// thread related
 			list.add(MockTimer.class);

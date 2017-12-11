@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2016 Gordon Fraser, Andrea Arcuri and EvoSuite
+ * Copyright (C) 2010-2017 Gordon Fraser, Andrea Arcuri and EvoSuite
  * contributors
  *
  * This file is part of EvoSuite.
@@ -22,6 +22,7 @@
  */
 package org.evosuite.runtime.instrumentation;
 
+import java.awt.*;
 import java.io.ObjectStreamClass;
 import java.io.Serializable;
 import java.util.Arrays;
@@ -29,6 +30,7 @@ import java.util.Arrays;
 import org.evosuite.runtime.RuntimeSettings;
 import org.evosuite.runtime.annotation.EvoSuiteExclude;
 import org.evosuite.runtime.mock.MockList;
+import org.evosuite.runtime.mock.StaticReplacementMock;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
@@ -136,9 +138,13 @@ public class MethodCallReplacementClassAdapter extends ClassVisitor {
 			 */
 			
 			Class<?> mockSuperClass = MockList.getMockClass(superNameWithDots);
-			String mockSuperClassName = mockSuperClass.getCanonicalName().replace('.', '/');
-			
-			super.visit(version, access, name, signature, mockSuperClassName, interfaces);
+			if(StaticReplacementMock.class.isAssignableFrom(mockSuperClass)) {
+				super.visit(version, access, name, signature, superName, interfaces);
+
+			} else {
+				String mockSuperClassName = mockSuperClass.getCanonicalName().replace('.', '/');
+				super.visit(version, access, name, signature, mockSuperClassName, interfaces);
+			}
 		} else {
 			super.visit(version, access, name, signature, superName, interfaces);
 		}
@@ -150,7 +156,7 @@ public class MethodCallReplacementClassAdapter extends ClassVisitor {
 	public void visitEnd() {
 		if(canChangeSignature && !definesHashCode && !isInterface && RuntimeSettings.mockJVMNonDeterminism) {
 
-			logger.info("No hashCode defined for: "+className+", superclass = "+superClassName);
+//			logger.info("No hashCode defined for: "+className+", superclass = "+superClassName);
 
 			if(superClassName.equals("java.lang.Object")) { //TODO: why only if superclass is Object??? unclear
 				Method hashCodeMethod = Method.getMethod("int hashCode()");
@@ -185,11 +191,8 @@ public class MethodCallReplacementClassAdapter extends ClassVisitor {
 					logger.info("Adding serialId to class "+className);
 					visitField(Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL, "serialVersionUID", "J", null, serialID);
 				}
-			} catch(ClassNotFoundException e) {
+			} catch(ClassNotFoundException | NoClassDefFoundError | HeadlessException | ExceptionInInitializerError e) {
 				logger.warn("Failed to add serialId to class "+className+": "+e.getMessage());
-			} catch (NoClassDefFoundError e) {
-				logger.warn("Failed to add serialId to class "+className+": "+e.getMessage());
-				
 			} finally {
 				Thread.currentThread().setContextClassLoader(threadCL);
 			}

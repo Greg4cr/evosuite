@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2016 Gordon Fraser, Andrea Arcuri and EvoSuite
+ * Copyright (C) 2010-2017 Gordon Fraser, Andrea Arcuri and EvoSuite
  * contributors
  *
  * This file is part of EvoSuite.
@@ -40,7 +40,7 @@ public class OnlyMutationTestFitness extends MutationTestFitness {
 		double fitness = 0.0;
 
 		// Get control flow distance
-		if (!result.getTrace().wasMutationTouched(mutation.getId()) || !result.calledReflection()) {
+		if (!result.getTrace().wasMutationTouched(mutation.getId()) || result.calledReflection()) {
 			fitness = 1.0;
 		} else {
 			fitness = normalize(result.getTrace().getMutationDistance(mutation.getId()));

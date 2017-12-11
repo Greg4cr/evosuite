@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2016 Gordon Fraser, Andrea Arcuri and EvoSuite
+ * Copyright (C) 2010-2017 Gordon Fraser, Andrea Arcuri and EvoSuite
  * contributors
  *
  * This file is part of EvoSuite.
@@ -42,11 +42,16 @@ import org.evosuite.runtime.util.SystemInUtil;
 import org.evosuite.runtime.vnet.NonFunctionalRequirementRule;
 import org.evosuite.testcase.execution.ExecutionResult;
 import org.evosuite.testcase.execution.reset.ClassReInitializer;
+import org.evosuite.testcase.statements.FunctionalMockStatement;
+import org.evosuite.testcase.statements.Statement;
+import org.evosuite.utils.generic.GenericClass;
 import org.junit.rules.Timeout;
+import org.mockito.Mockito;
 
 import java.lang.reflect.Constructor;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static org.evosuite.junit.writer.TestSuiteWriterUtils.*;
 
@@ -111,6 +116,10 @@ public class Scaffolding {
 		}
 		builder.append("\n");
 
+		if(TestSuiteWriterUtils.doesUseMocks(results)){
+			builder.append("import static "+Mockito.class.getCanonicalName()+".*;\n");
+		}
+
 		builder.append("@EvoSuiteClassExclude\n");
 		builder.append(TestSuiteWriterUtils.getAdapter().getClassDefinition(name));
 		builder.append(" {\n");
@@ -133,12 +142,13 @@ public class Scaffolding {
 	 * @return
 	 */
 	public static List<String> getScaffoldingImports(boolean wasSecurityException, List<ExecutionResult> results) {
-		List<String> list = new ArrayList<String>();
+		List<String> list = new ArrayList<>();
 
 		list.add(EvoSuiteClassExclude.class.getCanonicalName());
 
 		if (TestSuiteWriterUtils.needToUseAgent() || wasSecurityException || SystemInUtil.getInstance().hasBeenUsed()
-				|| JOptionPaneInputs.getInstance().hasAnyDialog() || !Properties.NO_RUNTIME_DEPENDENCY) {
+				|| JOptionPaneInputs.getInstance().hasAnyDialog() || !Properties.NO_RUNTIME_DEPENDENCY
+				|| TestSuiteWriterUtils.doesUseMocks(results)) {
 			list.add(org.junit.BeforeClass.class.getCanonicalName());
 			list.add(org.junit.Before.class.getCanonicalName());
 			list.add(org.junit.After.class.getCanonicalName());
@@ -211,7 +221,7 @@ public class Scaffolding {
 
 		generateFields(bd, wasSecurityException, results);
 
-		generateBeforeClass(bd, wasSecurityException);
+		generateBeforeClass(bd, wasSecurityException, results);
 
 		generateAfterClass(bd, wasSecurityException, results);
 
@@ -223,11 +233,58 @@ public class Scaffolding {
 
 		generateInitializeClasses(name, bd);
 
+		generateMockInitialization(name, bd, results);
+
 		if (Properties.RESET_STATIC_FIELDS) {
 			generateResetClasses(name, bd);
 		}
 
 		return bd.toString();
+	}
+
+
+	/**
+	 * This is needed  because the first time we do initialize a mock object, that can take
+	 * some seconds (successive calls would be based on cached data), and so tests might
+	 * timeout. So here we force the mock initialization in a @BeforeClass
+	 *
+	 * @param bd
+	 * @param results
+     */
+	private void generateMockInitialization(String testClassName, StringBuilder bd, List<ExecutionResult> results) {
+		if(! TestSuiteWriterUtils.doesUseMocks(results)){
+			return;
+		}
+
+
+		// In order to make sure this is called *after* initializeClasses this method is now called directly from initEvoSuiteFramework
+		// bd.append(METHOD_SPACE);
+		// bd.append("@BeforeClass \n");
+
+		bd.append(METHOD_SPACE);
+		bd.append("private static void initMocksToAvoidTimeoutsInTheTests() throws ClassNotFoundException { \n");
+
+		Set<String> mockStatements = new LinkedHashSet<>();
+		for(ExecutionResult er : results) {
+			for (Statement st : er.test) {
+				if (st instanceof FunctionalMockStatement) {
+					FunctionalMockStatement fms = (FunctionalMockStatement) st;
+					String name = new GenericClass(fms.getReturnType()).getRawClass().getTypeName();
+					mockStatements.add("mock(Class.forName(\""+name+"\", false, "+testClassName + ".class.getClassLoader()));");
+				}
+			}
+		}
+
+		mockStatements.stream()
+				.sorted()
+				.forEach(m -> {
+					bd.append(BLOCK_SPACE);
+					bd.append(m);
+					bd.append("\n");
+				});
+
+		bd.append(METHOD_SPACE);
+		bd.append("}\n");
 	}
 
 	private void generateNFRRule(StringBuilder bd) {
@@ -592,7 +649,7 @@ public class Scaffolding {
 		}
 
 		bd.append(METHOD_SPACE);
-		bd.append("public void setSystemProperties() {\n");
+		bd.append("public static void setSystemProperties() {\n");
 		bd.append(" \n");
 		if (TestSuiteWriterUtils.shouldResetProperties(results)) {
 			/*
@@ -635,15 +692,15 @@ public class Scaffolding {
 
 	}
 
-	private void generateBeforeClass(StringBuilder bd, boolean wasSecurityException) {
+	private void generateBeforeClass(StringBuilder bd, boolean wasSecurityException, List<ExecutionResult> results) {
 
 		if (!wasSecurityException && !TestSuiteWriterUtils.needToUseAgent()) {
 			return;
 		}
 
+		bd.append("\n");
 		bd.append(METHOD_SPACE);
 		bd.append("@BeforeClass \n");
-
 		bd.append(METHOD_SPACE);
 		bd.append("public static void initEvoSuiteFramework() { \n");
 
@@ -692,9 +749,11 @@ public class Scaffolding {
 			bd.append(EXECUTOR_SERVICE + " = Executors.newCachedThreadPool(); \n");
 		}
 
-		if (Properties.RESET_STATIC_FIELDS) {
+		if (Properties.RESET_STATIC_FIELDS && Properties.REPLACE_CALLS) {
 			bd.append(BLOCK_SPACE);
-			bd.append(JDKClassResetter.class.getName() + ".init(); \n");
+			bd.append(JDKClassResetter.class.getName() + ".init();\n");
+			bd.append(BLOCK_SPACE);
+			bd.append("setSystemProperties();\n");
 			bd.append(BLOCK_SPACE);
 			bd.append(InitializingListener.INITIALIZE_CLASSES_METHOD + "();" + "\n");
 		}
@@ -715,6 +774,10 @@ public class Scaffolding {
 			bd.append(DBManager.class.getName() + ".getInstance().initDB(); \n");
 		}
 
+		if(TestSuiteWriterUtils.doesUseMocks(results)) {
+			bd.append(BLOCK_SPACE);
+			bd.append("try { initMocksToAvoidTimeoutsInTheTests(); } catch(ClassNotFoundException e) {} \n");
+		}
 		bd.append(METHOD_SPACE);
 		bd.append("} \n");
 

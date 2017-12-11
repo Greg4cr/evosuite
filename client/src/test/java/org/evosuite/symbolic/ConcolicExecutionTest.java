@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2016 Gordon Fraser, Andrea Arcuri and EvoSuite
+ * Copyright (C) 2010-2017 Gordon Fraser, Andrea Arcuri and EvoSuite
  * contributors
  *
  * This file is part of EvoSuite.
@@ -2236,7 +2236,7 @@ public class ConcolicExecutionTest {
 		List<BranchCondition> branch_conditions = executeTest(tc);
 		Set<Variable<?>> variables = new HashSet<Variable<?>>();
 		for (BranchCondition branchCondition : branch_conditions) {
-			variables.addAll(branchCondition.getLocalConstraint()
+			variables.addAll(branchCondition.getConstraint()
 					.getVariables());
 		}
 		assertEquals(2, variables.size());

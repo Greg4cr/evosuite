@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2016 Gordon Fraser, Andrea Arcuri and EvoSuite
+ * Copyright (C) 2010-2017 Gordon Fraser, Andrea Arcuri and EvoSuite
  * contributors
  *
  * This file is part of EvoSuite.
@@ -27,25 +27,19 @@ import org.evosuite.TestGenerationContext;
 import org.evosuite.coverage.branch.BranchPool;
 import org.evosuite.coverage.mutation.MutationTimeoutStoppingCondition;
 import org.evosuite.ga.ChromosomeFactory;
-import org.evosuite.ga.MinimizeSizeSecondaryObjective;
-import org.evosuite.ga.SecondaryObjective;
 import org.evosuite.ga.FitnessReplacementFunction;
-import org.evosuite.ga.metaheuristics.GeneticAlgorithm;
-import org.evosuite.ga.metaheuristics.MonotonicGA;
-import org.evosuite.ga.metaheuristics.NSGAII;
-import org.evosuite.ga.metaheuristics.OnePlusOneEA;
-import org.evosuite.ga.metaheuristics.StandardGA;
-import org.evosuite.ga.metaheuristics.SteadyStateGA;
+import org.evosuite.ga.SecondaryObjective;
+import org.evosuite.ga.metaheuristics.*;
 import org.evosuite.ga.operators.crossover.CrossOverFunction;
 import org.evosuite.ga.operators.crossover.SinglePointCrossOver;
 import org.evosuite.ga.operators.crossover.SinglePointFixedCrossOver;
 import org.evosuite.ga.operators.crossover.SinglePointRelativeCrossOver;
+import org.evosuite.ga.operators.crossover.UniformCrossOver;
 import org.evosuite.ga.operators.selection.BinaryTournamentSelectionCrowdedComparison;
 import org.evosuite.ga.operators.selection.FitnessProportionateSelection;
 import org.evosuite.ga.operators.selection.RankSelection;
 import org.evosuite.ga.operators.selection.SelectionFunction;
 import org.evosuite.ga.operators.selection.TournamentSelection;
-import org.evosuite.ga.metaheuristics.RandomSearch;
 import org.evosuite.ga.stoppingconditions.GlobalTimeStoppingCondition;
 import org.evosuite.ga.stoppingconditions.MaxTimeStoppingCondition;
 import org.evosuite.ga.stoppingconditions.StoppingCondition;
@@ -56,6 +50,8 @@ import org.evosuite.testcase.TestChromosome;
 import org.evosuite.testcase.factories.AllMethodsTestChromosomeFactory;
 import org.evosuite.testcase.factories.JUnitTestCarvedChromosomeFactory;
 import org.evosuite.testcase.factories.RandomLengthTestFactory;
+import org.evosuite.testcase.secondaryobjectives.MinimizeExceptionsSecondaryObjective;
+import org.evosuite.testcase.secondaryobjectives.MinimizeLengthSecondaryObjective;
 import org.evosuite.utils.ArrayUtil;
 
 /**
@@ -94,11 +90,17 @@ public class PropertiesTestGAFactory extends PropertiesSearchAlgorithmFactory<Te
 		switch (Properties.ALGORITHM) {
 		case ONEPLUSONEEA:
 			logger.info("Chosen search algorithm: (1+1)EA");
-			return new OnePlusOneEA<TestChromosome>(factory);
+			return new OnePlusOneEA<>(factory);
+		case MUPLUSLAMBDAEA:
+		  logger.info("Chosen search algorithm: (Mu+Lambda)EA");
+          return new MuPlusLambdaEA<>(factory, Properties.MU, Properties.LAMBDA);
+        case BREEDERGA:
+				logger.info("Chosen search algorithm: BreederGA");
+				return new BreederGA<>(factory);
 		case MONOTONICGA:
 			logger.info("Chosen search algorithm: SteadyStateGA");
 			{
-				MonotonicGA<TestChromosome> ga = new MonotonicGA<TestChromosome>(factory);
+				MonotonicGA<TestChromosome> ga = new MonotonicGA<>(factory);
 				if (Properties.REPLACEMENT_FUNCTION == TheReplacementFunction.FITNESSREPLACEMENT) {
 					// user has explicitly asked for this replacement function
 					ga.setReplacementFunction(new FitnessReplacementFunction());
@@ -110,7 +112,7 @@ public class PropertiesTestGAFactory extends PropertiesSearchAlgorithmFactory<Te
 		case STEADYSTATEGA:
 			logger.info("Chosen search algorithm: MuPlusLambdaGA");
 			{
-				SteadyStateGA<TestChromosome> ga = new SteadyStateGA<TestChromosome>(factory);
+				SteadyStateGA<TestChromosome> ga = new SteadyStateGA<>(factory);
 				if (Properties.REPLACEMENT_FUNCTION == TheReplacementFunction.FITNESSREPLACEMENT) {
 					// user has explicitly asked for this replacement function
 					ga.setReplacementFunction(new FitnessReplacementFunction());
@@ -122,13 +124,19 @@ public class PropertiesTestGAFactory extends PropertiesSearchAlgorithmFactory<Te
 			}
 		case RANDOM:
 			logger.info("Chosen search algorithm: Random");
-			return new RandomSearch<TestChromosome>(factory);
+			return new RandomSearch<>(factory);
         case NSGAII:
             logger.info("Chosen search algorithm: NSGAII");
-            return new NSGAII<TestChromosome>(factory);
+            return new NSGAII<>(factory);
+        case SPEA2:
+            logger.info("Chosen search algorithm: SPEA2");
+            return new SPEA2<>(factory);
+        case ONEPLUSLAMBDALAMBDAGA:
+            logger.info("Chosen search algorithm: 1 + (lambda, lambda)GA");
+            return new OnePlusLambdaLambdaGA<>(factory);
 		default:
 			logger.info("Chosen search algorithm: StandardGA");
-			return new StandardGA<TestChromosome>(factory);
+			return new StandardGA<>(factory);
 		}
 	}
 	
@@ -153,6 +161,8 @@ public class PropertiesTestGAFactory extends PropertiesSearchAlgorithmFactory<Te
 			return new SinglePointRelativeCrossOver();
 		case SINGLEPOINT:
 			return new SinglePointCrossOver();
+		case UNIFORM:
+			return new UniformCrossOver();
 		default:
 			throw new RuntimeException("Unknown crossover function: "
 			        + Properties.CROSSOVER_FUNCTION);
@@ -168,13 +178,13 @@ public class PropertiesTestGAFactory extends PropertiesSearchAlgorithmFactory<Te
 	 * 
 	 * @param name
 	 *            a {@link java.lang.String} object.
-	 * @return a {@link org.evosuite.search.ga.SecondaryObjective} object.
+	 * @return a {@link org.evosuite.ga.SecondaryObjective} object.
 	 */
 	private SecondaryObjective<TestChromosome> getSecondaryTestObjective(String name) {
-		if (name.equalsIgnoreCase("size"))
-			return new MinimizeSizeSecondaryObjective<>();
+		if (name.equalsIgnoreCase("length"))
+			return new MinimizeLengthSecondaryObjective();
 		else if (name.equalsIgnoreCase("exceptions"))
-			return new org.evosuite.testcase.MinimizeExceptionsSecondaryObjective();
+			return new MinimizeExceptionsSecondaryObjective();
 		else
 			throw new RuntimeException("ERROR: asked for unknown secondary objective \""
 			        + name + "\"");

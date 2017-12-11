@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2016 Gordon Fraser, Andrea Arcuri and EvoSuite
+ * Copyright (C) 2010-2017 Gordon Fraser, Andrea Arcuri and EvoSuite
  * contributors
  *
  * This file is part of EvoSuite.
@@ -356,8 +356,23 @@ public class TestCodeVisitor extends TestVisitor {
 		} else if (var instanceof FieldReference) {
 			VariableReference source = ((FieldReference) var).getSource();
 			GenericField field = ((FieldReference) var).getField();
-			if (source != null)
-				return getVariableName(source) + "." + field.getName();
+			if (source != null) {
+				String ret = "";
+				if(!source.isAssignableTo(field.getField().getDeclaringClass())) {
+					try {
+						// If the concrete source class has that field then it's ok
+						source.getVariableClass().getDeclaredField(field.getName());
+						ret = getVariableName(source);
+					} catch(NoSuchFieldException e) {
+						// If not we need to cast to the subtype
+						 ret= "((" + getTypeName(field.getField().getDeclaringClass()) + ") "+ getVariableName(source) +")";
+					}
+				} else {
+					ret += getVariableName(source);
+				}
+
+				return ret + "." + field.getName();
+			}
 			else
 				return getClassName(field.getField().getDeclaringClass()) + "."
 				        + field.getName();
@@ -478,13 +493,13 @@ public class TestCodeVisitor extends TestVisitor {
 		if (value == null) {
 			stmt += "assertNull(" + getVariableName(source) + ");";
 		} else if (source.getVariableClass().equals(float.class)) {
-			stmt += "assertEquals(" + NumberFormatter.getNumberString(value) + ", "
-			        + getVariableName(source) + ", "+NumberFormatter.getNumberString(Properties.FLOAT_PRECISION)+");";
+			stmt += "assertEquals(" + NumberFormatter.getNumberString(value, this) + ", "
+			        + getVariableName(source) + ", "+NumberFormatter.getNumberString(Properties.FLOAT_PRECISION, this)+");";
 		} else if (source.getVariableClass().equals(double.class)) {
-			stmt += "assertEquals(" + NumberFormatter.getNumberString(value) + ", "
-			        + getVariableName(source) + ", "+NumberFormatter.getNumberString(Properties.DOUBLE_PRECISION)+");";
+			stmt += "assertEquals(" + NumberFormatter.getNumberString(value, this) + ", "
+			        + getVariableName(source) + ", "+NumberFormatter.getNumberString(Properties.DOUBLE_PRECISION, this)+");";
 		} else if (value.getClass().isEnum()) {
-			stmt += "assertEquals(" + NumberFormatter.getNumberString(value) + ", "
+			stmt += "assertEquals(" + NumberFormatter.getNumberString(value, this) + ", "
 			        + getVariableName(source) + ");";
 			// Make sure the enum is imported in the JUnit test
 			getClassName(value.getClass());
@@ -498,20 +513,20 @@ public class TestCodeVisitor extends TestVisitor {
             stmt += "" + getVariableName(source) + ");";
         } else if (source.isWrapperType()) {
 			if (source.getVariableClass().equals(Float.class)) {
-				stmt += "assertEquals(" + NumberFormatter.getNumberString(value)
-				        + ", (float)" + getVariableName(source) + ", "+NumberFormatter.getNumberString(Properties.FLOAT_PRECISION)+");";
+				stmt += "assertEquals(" + NumberFormatter.getNumberString(value, this)
+				        + ", (float)" + getVariableName(source) + ", "+NumberFormatter.getNumberString(Properties.FLOAT_PRECISION, this)+");";
 			} else if (source.getVariableClass().equals(Double.class)) {
-				stmt += "assertEquals(" + NumberFormatter.getNumberString(value)
-				        + ", (double)" + getVariableName(source) + ", "+NumberFormatter.getNumberString(Properties.DOUBLE_PRECISION)+");";
+				stmt += "assertEquals(" + NumberFormatter.getNumberString(value, this)
+				        + ", (double)" + getVariableName(source) + ", "+NumberFormatter.getNumberString(Properties.DOUBLE_PRECISION, this)+");";
 			} else if (value.getClass().isEnum()) {
-				stmt += "assertEquals(" + NumberFormatter.getNumberString(value)
+				stmt += "assertEquals(" + NumberFormatter.getNumberString(value, this)
 				        + ", " + getVariableName(source) + ");";
 			} else
-				stmt += "assertEquals(" + NumberFormatter.getNumberString(value)
+				stmt += "assertEquals(" + NumberFormatter.getNumberString(value, this)
 				        + ", (" + NumberFormatter.getBoxedClassName(value) + ")"
 				        + getVariableName(source) + ");";
 		} else {
-			stmt += "assertEquals(" + NumberFormatter.getNumberString(value) + ", "
+			stmt += "assertEquals(" + NumberFormatter.getNumberString(value, this) + ", "
 			        + getVariableName(source) + ");";
 		}
 						
@@ -541,14 +556,14 @@ public class TestCodeVisitor extends TestVisitor {
 			else
 				first = false;
 
-			stmt += NumberFormatter.getNumberString(o);
+			stmt += NumberFormatter.getNumberString(o, this);
 
 		}
 		stmt += "}" + ", " + getVariableName(source);
 		if(source.getComponentClass().equals(Float.class) || source.getComponentClass().equals(float.class))
-			stmt += ", "+NumberFormatter.getNumberString(Properties.FLOAT_PRECISION)+");";
+			stmt += ", "+NumberFormatter.getNumberString(Properties.FLOAT_PRECISION, this)+");";
 		else if(source.getComponentClass().equals(Double.class) || source.getComponentClass().equals(double.class))
-			stmt += ", "+NumberFormatter.getNumberString(Properties.DOUBLE_PRECISION)+");";
+			stmt += ", "+NumberFormatter.getNumberString(Properties.DOUBLE_PRECISION, this)+");";
 		else if(source.getComponentClass().equals(Boolean.class) || source.getComponentClass().equals(boolean.class))
 			stmt += "));";
 		else
@@ -582,19 +597,19 @@ public class TestCodeVisitor extends TestVisitor {
 			testCode += "assertNull(" + target
 			        + ");";
 		} else if (value.getClass().equals(Long.class)) {
-			testCode += "assertEquals(" + NumberFormatter.getNumberString(value) + ", "
+			testCode += "assertEquals(" + NumberFormatter.getNumberString(value, this) + ", "
 			        + target + ");";
 		} else if (value.getClass().equals(Float.class)) {
-			testCode += "assertEquals(" + NumberFormatter.getNumberString(value) + ", "
-			        + target + ", " + NumberFormatter.getNumberString(Properties.FLOAT_PRECISION) +");";
+			testCode += "assertEquals(" + NumberFormatter.getNumberString(value, this) + ", "
+			        + target + ", " + NumberFormatter.getNumberString(Properties.FLOAT_PRECISION, this) +");";
 		} else if (value.getClass().equals(Double.class)) {
-			testCode += "assertEquals(" + NumberFormatter.getNumberString(value) + ", "
-			        + target + ", "+NumberFormatter.getNumberString(Properties.DOUBLE_PRECISION) + ");";
+			testCode += "assertEquals(" + NumberFormatter.getNumberString(value, this) + ", "
+			        + target + ", "+NumberFormatter.getNumberString(Properties.DOUBLE_PRECISION, this) + ");";
 		} else if (value.getClass().equals(Character.class)) {
-			testCode += "assertEquals(" + NumberFormatter.getNumberString(value) + ", "
+			testCode += "assertEquals(" + NumberFormatter.getNumberString(value, this) + ", "
 			        + target + ");";
 		} else if (value.getClass().equals(String.class)) {
-			testCode += "assertEquals(" + NumberFormatter.getNumberString(value) + ", "
+			testCode += "assertEquals(" + NumberFormatter.getNumberString(value, this) + ", "
 			        + target + ");";
 		} else if(value.getClass().equals(Boolean.class)){
             Boolean flag = (Boolean) value;
@@ -605,13 +620,13 @@ public class TestCodeVisitor extends TestVisitor {
             }
             testCode += "" + target + ");";
         }else if (value.getClass().isEnum()) {
-			testCode += "assertEquals(" + NumberFormatter.getNumberString(value) + ", "
+			testCode += "assertEquals(" + NumberFormatter.getNumberString(value, this) + ", "
 			        + target + ");";
 			// Make sure the enum is imported in the JUnit test
 			getClassName(value.getClass());
 
 		} else
-			testCode += "assertEquals(" + NumberFormatter.getNumberString(value) + ", "
+			testCode += "assertEquals(" + NumberFormatter.getNumberString(value, this) + ", "
 			        + target + ");";
 	}
 
@@ -627,29 +642,49 @@ public class TestCodeVisitor extends TestVisitor {
 		VariableReference source = assertion.getSource();
 		Object value = assertion.getValue();
 		Inspector inspector = assertion.getInspector();
-		
+		Class<?> generatedType = inspector.getReturnType();
+
 		if (value == null) {
 			testCode += "assertNull(" + getVariableName(source) + "."
 			        + inspector.getMethodCall() + "());";
 		} else if (value.getClass().equals(Long.class)) {
-			testCode += "assertEquals(" + NumberFormatter.getNumberString(value) + ", "
-			        + getVariableName(source) + "." + inspector.getMethodCall() + "());";
+			testCode += "assertEquals(" + NumberFormatter.getNumberString(value, this) + ", ";
+			if(ClassUtils.isPrimitiveWrapper(generatedType))
+				testCode += "(long)";
+			testCode +=  getVariableName(source) + "." + inspector.getMethodCall() + "());";
+		} else if (value.getClass().equals(Short.class)) {
+			testCode += "assertEquals(" + NumberFormatter.getNumberString(value, this) + ", ";
+			if(ClassUtils.isPrimitiveWrapper(generatedType))
+				testCode += "(short)";
+			testCode +=  getVariableName(source) + "." + inspector.getMethodCall() + "());";
+		} else if (value.getClass().equals(Integer.class)) {
+			testCode += "assertEquals(" + NumberFormatter.getNumberString(value, this) + ", ";
+			if(ClassUtils.isPrimitiveWrapper(generatedType))
+				testCode += "(int)";
+			testCode +=  getVariableName(source) + "." + inspector.getMethodCall() + "());";
+		} else if (value.getClass().equals(Byte.class)) {
+			testCode += "assertEquals(" + NumberFormatter.getNumberString(value, this) + ", ";
+			if(ClassUtils.isPrimitiveWrapper(generatedType))
+				testCode += "(byte)";
+			testCode +=  getVariableName(source) + "." + inspector.getMethodCall() + "());";
 		} else if (value.getClass().equals(Float.class)) {
-			testCode += "assertEquals(" + NumberFormatter.getNumberString(value) + ", "
-			        + getVariableName(source) + "." + inspector.getMethodCall()
-			        + "(), "+NumberFormatter.getNumberString(Properties.FLOAT_PRECISION)+");";
+			testCode += "assertEquals(" + NumberFormatter.getNumberString(value, this) + ", ";
+			testCode += getVariableName(source) + "." + inspector.getMethodCall()
+			        + "(), "+NumberFormatter.getNumberString(Properties.FLOAT_PRECISION, this)+");";
 		} else if (value.getClass().equals(Double.class)) {
-			testCode += "assertEquals(" + NumberFormatter.getNumberString(value) + ", "
-			        + getVariableName(source) + "." + inspector.getMethodCall()
-			        + "(), "+NumberFormatter.getNumberString(Properties.DOUBLE_PRECISION)+");";
+			testCode += "assertEquals(" + NumberFormatter.getNumberString(value, this) + ", ";
+			testCode += getVariableName(source) + "." + inspector.getMethodCall()
+			        + "(), "+NumberFormatter.getNumberString(Properties.DOUBLE_PRECISION, this)+");";
 		} else if (value.getClass().equals(Character.class)) {
-			testCode += "assertEquals(" + NumberFormatter.getNumberString(value) + ", "
-			        + getVariableName(source) + "." + inspector.getMethodCall() + "());";
+			testCode += "assertEquals(" + NumberFormatter.getNumberString(value, this) + ", ";
+			if(ClassUtils.isPrimitiveWrapper(generatedType))
+				testCode += "(char)";
+			testCode += getVariableName(source) + "." + inspector.getMethodCall() + "());";
 		} else if (value.getClass().equals(String.class)) {
-			testCode += "assertEquals(" + NumberFormatter.getNumberString(value) + ", "
-			        + getVariableName(source) + "." + inspector.getMethodCall() + "());";
+			testCode += "assertEquals(" + NumberFormatter.getNumberString(value, this) + ", ";
+			testCode += getVariableName(source) + "." + inspector.getMethodCall() + "());";
 		} else if (value.getClass().isEnum() || value instanceof Enum) {
-			testCode += "assertEquals(" + NumberFormatter.getNumberString(value) + ", "
+			testCode += "assertEquals(" + NumberFormatter.getNumberString(value, this) + ", "
 			        + getVariableName(source) + "." + inspector.getMethodCall() + "());";
 			// Make sure the enum is imported in the JUnit test			
 			getClassName(value.getClass());
@@ -731,31 +766,31 @@ public class TestCodeVisitor extends TestVisitor {
 			if (source.getVariableClass().equals(float.class)) {
 				if (((Boolean) value).booleanValue())
 					testCode += "assertEquals(" + getVariableName(source) + ", "
-							+ getVariableName(dest) + ", " + NumberFormatter.getNumberString(Properties.FLOAT_PRECISION) + ");";
+							+ getVariableName(dest) + ", " + NumberFormatter.getNumberString(Properties.FLOAT_PRECISION, this) + ");";
 				else
 					testCode += "assertNotEquals(" + getVariableName(source) + ", "
-							+ getVariableName(dest) + ", " + NumberFormatter.getNumberString(Properties.FLOAT_PRECISION) + ");";
+							+ getVariableName(dest) + ", " + NumberFormatter.getNumberString(Properties.FLOAT_PRECISION, this) + ");";
 			} else if (source.getVariableClass().equals(Float.class)) {
 					if (((Boolean) value).booleanValue())
 						testCode += "assertEquals((float)" + getVariableName(source) + ", (float)"
-								+ getVariableName(dest) + ", " + NumberFormatter.getNumberString(Properties.FLOAT_PRECISION) + ");";
+								+ getVariableName(dest) + ", " + NumberFormatter.getNumberString(Properties.FLOAT_PRECISION, this) + ");";
 					else
 						testCode += "assertNotEquals((float)" + getVariableName(source) + ", (float)"
-								+ getVariableName(dest) + ", " + NumberFormatter.getNumberString(Properties.FLOAT_PRECISION) + ");";
+								+ getVariableName(dest) + ", " + NumberFormatter.getNumberString(Properties.FLOAT_PRECISION, this) + ");";
 			} else if (source.getVariableClass().equals(double.class)) {
                 if (((Boolean) value).booleanValue())
                     testCode += "assertEquals(" + getVariableName(source) + ", "
-                            + getVariableName(dest) + ", " + NumberFormatter.getNumberString(Properties.DOUBLE_PRECISION) + ");";
+                            + getVariableName(dest) + ", " + NumberFormatter.getNumberString(Properties.DOUBLE_PRECISION, this) + ");";
                 else
                     testCode += "assertNotEquals(" + getVariableName(source) + ", "
-                            + getVariableName(dest) + ", " + NumberFormatter.getNumberString(Properties.DOUBLE_PRECISION) + ");";
+                            + getVariableName(dest) + ", " + NumberFormatter.getNumberString(Properties.DOUBLE_PRECISION, this) + ");";
 			} else if (source.getVariableClass().equals(Double.class)) {
 				if (((Boolean) value).booleanValue())
 					testCode += "assertEquals((double)" + getVariableName(source) + ", (double)"
-							+ getVariableName(dest) + ", " + NumberFormatter.getNumberString(Properties.DOUBLE_PRECISION) + ");";
+							+ getVariableName(dest) + ", " + NumberFormatter.getNumberString(Properties.DOUBLE_PRECISION, this) + ");";
 				else
 					testCode += "assertNotEquals((double)" + getVariableName(source) + ", (double)"
-							+ getVariableName(dest) + ", " + NumberFormatter.getNumberString(Properties.DOUBLE_PRECISION) + ");";
+							+ getVariableName(dest) + ", " + NumberFormatter.getNumberString(Properties.DOUBLE_PRECISION, this) + ");";
             } else if(source.isWrapperType()) {
                 if (((Boolean) value).booleanValue())
                     testCode += "assertTrue(" + getVariableName(source) + ".equals((" + this.getClassName(Object.class) +")"
@@ -946,7 +981,7 @@ public class TestCodeVisitor extends TestVisitor {
 			testCode += builder.toString();
 		} else {
 			testCode += getClassName(retval) + " " + getVariableName(retval) + " = "
-			        + NumberFormatter.getNumberString(value) + ";" + NEWLINE;
+			        + NumberFormatter.getNumberString(value, this) + ";" + NEWLINE;
 		}
 		addAssertions(statement);
 	}
@@ -1183,22 +1218,29 @@ public class TestCodeVisitor extends TestVisitor {
 
 			List<VariableReference> params = st.getParameters(md.getID());
 
-			Class<?> returnType = md.getMethod().getReturnType();
+			GenericClass returnType = md.getReturnClass();
+			// Class<?> returnType = md.getMethod().getReturnType();
 
 			String parameter_string;
 
 			if(! returnType.isPrimitive()) {
 				Type[] types = new Type[params.size()];
+				boolean isOverloaded = false;
 				for (int i = 0; i < types.length; i++) {
-					types[i] = params.get(i).getType();
+					if(types.length > 1 && returnType.isArray()) {
+						types[i] = Object.class;
+						isOverloaded = true;
+					} else {
+						types[i] = params.get(i).getType();
+					}
 				}
 
-				parameter_string = getParameterString(types, params, false, false, 0);//TODO unsure of these parameters
+				parameter_string = getParameterString(types, params, false, isOverloaded, 0);//TODO unsure of these parameters
 			} else {
 
 				//if return type is a primitive, then things can get complicated due to autoboxing :(
 
-				parameter_string = getParameterStringForFMthatReturnPrimitive(returnType, params);
+				parameter_string = getParameterStringForFMthatReturnPrimitive(returnType.getRawClass(), params);
 			}
 
 			//this does not work when throwing exception as default answer
@@ -1327,7 +1369,7 @@ public class TestCodeVisitor extends TestVisitor {
 				result += getClassName(retval) + " ";
 			}
 		}
-		if (shouldUseTryCatch(exception)) {
+		if (shouldUseTryCatch(exception, statement.isDeclaredException(exception))) {
 			result += "try { " + NEWLINE + "  ";
 		}
 
@@ -1346,7 +1388,6 @@ public class TestCodeVisitor extends TestVisitor {
 				callee_str = "(" + name + ")";
 			}
 		}
-
 		if (method.isStatic()) {
 			callee_str += getClassName(method.getMethod().getDeclaringClass());
 		} else {
@@ -1358,11 +1399,15 @@ public class TestCodeVisitor extends TestVisitor {
 				if(!callee.isAssignableTo(method.getMethod().getDeclaringClass())) {
 					try {
 						// If the concrete callee class has that method then it's ok
-						callee.getVariableClass().getMethod(method.getName(), method.getRawParameterTypes()); 
+						callee.getVariableClass().getDeclaredMethod(method.getName(), method.getRawParameterTypes());
 						callee_str += getVariableName(callee);						
 					} catch(NoSuchMethodException e) {
 						// If not we need to cast to the subtype
-						callee_str += "((" + getTypeName(method.getMethod().getDeclaringClass()) + ") "+ getVariableName(callee) +")";						
+						callee_str += "((" + getTypeName(method.getMethod().getDeclaringClass()) + ") " + getVariableName(callee) + ")";
+						// TODO: Here we could check if this is actually possible
+						// ...but what would we do?
+						// if(!ClassUtils.getAllSuperclasses(method.getMethod().getDeclaringClass()).contains(callee.getVariableClass())) {
+						//}
 					}
 				} else {
 					callee_str += getVariableName(callee);
@@ -1383,7 +1428,7 @@ public class TestCodeVisitor extends TestVisitor {
 			result += callee_str + "." + method.getName() + "(" + parameter_string + ");";
 		}
 
-		if (shouldUseTryCatch(exception)) {
+		if (shouldUseTryCatch(exception, statement.isDeclaredException(exception))) {
 			if (Properties.ASSERTIONS) {
 				result += generateFailAssertion(statement, exception);
 			}
@@ -1409,7 +1454,28 @@ public class TestCodeVisitor extends TestVisitor {
 		Class<?> ex = getExceptionClassToUse(exception);
 
 		// preparing the catch block
-		result += " catch(" + getClassName(ex) + " e) {" + NEWLINE;
+		if(!(exception instanceof RuntimeException) && !(exception instanceof Error)) {
+			// This is a checked exception.
+			if(statement.isDeclaredException(exception)) {
+				result += " catch(" + getClassName(ex) + " e) {" + NEWLINE;
+			}
+			else {
+				// A checked exception that is not declared cannot be thrown according to the JVM spec.
+				// And yet, it is possible, which is probably a bug in Java. See class org.apache.commons.lang3.time.FastDatePrinter:
+				//     @Override
+				//     public <B extends Appendable> B format(final Date date, final B buf) {
+				//     	final Calendar c = newCalendar();  // hard code GregorianCalendar
+				//     	c.setTime(date);
+				//     	return applyRules(c, buf);
+				//     }
+				// Passing in a PipeWriter will lead to an IOException.
+				// As a workaround, we'll just check for Throwable
+				//
+				result += " catch(" + getClassName(Throwable.class) + " e) {" + NEWLINE;
+			}
+		} else {
+			result += " catch(" + getClassName(ex) + " e) {" + NEWLINE;
+		}
 
 		// adding the message of the exception
 		String exceptionMessage;
@@ -1437,7 +1503,7 @@ public class TestCodeVisitor extends TestVisitor {
 			result += "   //" + NEWLINE;
 		}
 
-		if(sourceClass!=null && isValidSource(sourceClass) && isExceptionToAssertThrownBy(ex)) {
+		if(sourceClass!=null && isValidSource(sourceClass) && isExceptionToAssertThrownBy(ex) && !Properties.NO_RUNTIME_DEPENDENCY) {
 				/*
 					do not check source if it comes from a non-runtime evosuite
 					class. this could happen if source is an instrumentation done
@@ -1537,7 +1603,7 @@ public class TestCodeVisitor extends TestVisitor {
 		                                            constructor.isOverloaded(parameters),
 		                                            startPos);
 
-		if (shouldUseTryCatch(exception)) {
+		if (shouldUseTryCatch(exception, statement.isDeclaredException(exception))) {
 			String className = getClassName(retval);
 
 			// FIXXME: Workaround for primitives:
@@ -1564,7 +1630,7 @@ public class TestCodeVisitor extends TestVisitor {
 			        + "(" + parameterString + ");";
 		}
 
-		if (shouldUseTryCatch(exception)) {
+		if (shouldUseTryCatch(exception, statement.isDeclaredException(exception))) {
 			if (Properties.ASSERTIONS) {
 				result += generateFailAssertion(statement, exception);
 			}
@@ -1578,11 +1644,12 @@ public class TestCodeVisitor extends TestVisitor {
 		addAssertions(statement);
 	}
 
-	private boolean shouldUseTryCatch(Throwable t){
+	private boolean shouldUseTryCatch(Throwable t, boolean isDeclared) {
 		return t != null
 				&& ! (t instanceof OutOfMemoryError)
 				&& ! (t instanceof TooManyResourcesException)
-				&& ! test.isFailing();
+				&& ! test.isFailing()
+				&& (Properties.CATCH_UNDECLARED_EXCEPTIONS || isDeclared);
 	}
 
 	/**
@@ -1670,8 +1737,30 @@ public class TestCodeVisitor extends TestVisitor {
 		VariableReference retval = statement.getReturnValue();
 		VariableReference parameter = statement.getValue();
 
-		if (!retval.getVariableClass().equals(parameter.getVariableClass()))
-			cast = "(" + getClassName(retval) + ") ";
+		if (!retval.getVariableClass().equals(parameter.getVariableClass())) {
+			if (retval.isWrapperType() && parameter.isPrimitive()) {
+				cast = "(" + getTypeName(retval.getType()) + ") ";
+				if(!ClassUtils.primitiveToWrapper(parameter.getVariableClass()).equals(retval.getVariableClass())) {
+					cast += "(" + ClassUtils.wrapperToPrimitive(retval.getVariableClass()) + ")";
+				}
+
+			} else if (retval.isPrimitive()
+					&& parameter.isWrapperType()) {
+				cast = "(" + getTypeName(retval.getType()) + ") ";
+				if(!ClassUtils.primitiveToWrapper(retval.getVariableClass()).equals(parameter.getVariableClass())) {
+					cast += "(" + ClassUtils.wrapperToPrimitive(parameter.getVariableClass()) + ")";
+				}
+			} else if (retval.isWrapperType()
+					&& parameter.isWrapperType()) {
+				cast = "(" + getTypeName(retval.getType()) + ") ";
+				// Unbox first to make cast work
+				if(!ClassUtils.primitiveToWrapper(parameter.getVariableClass()).equals(retval.getVariableClass())) {
+					cast += "(" + ClassUtils.wrapperToPrimitive(retval.getVariableClass()) + ")";
+				}
+			} else {
+				cast = "(" + getClassName(retval) + ") ";
+			}
+		}
 
 		testCode += getVariableName(retval) + " = " + cast + getVariableName(parameter)
 		        + ";" + NEWLINE;

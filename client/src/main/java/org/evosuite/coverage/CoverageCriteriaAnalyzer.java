@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2016 Gordon Fraser, Andrea Arcuri and EvoSuite
+ * Copyright (C) 2010-2017 Gordon Fraser, Andrea Arcuri and EvoSuite
  * contributors
  *
  * This file is part of EvoSuite.
@@ -148,9 +148,9 @@ public class CoverageCriteriaAnalyzer {
             case STATEMENT:
                 return RuntimeVariable.StatementCoverage;
             case RHO:
-                return RuntimeVariable.RhoCoverage;
+                return RuntimeVariable.RhoScore;
             case AMBIGUITY:
-                return RuntimeVariable.AmbiguityCoverage;
+                return RuntimeVariable.AmbiguityScore;
             case STRONGMUTATION:
             case MUTATION:
                 return RuntimeVariable.MutationScore;

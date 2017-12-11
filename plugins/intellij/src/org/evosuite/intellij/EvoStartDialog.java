@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2016 Gordon Fraser, Andrea Arcuri and EvoSuite
+ * Copyright (C) 2010-2017 Gordon Fraser, Andrea Arcuri and EvoSuite
  * contributors
  *
  * This file is part of EvoSuite.
@@ -33,6 +33,7 @@ import java.awt.event.*;
 import java.io.File;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class EvoStartDialog extends JDialog {
@@ -303,6 +304,12 @@ public class EvoStartDialog extends JDialog {
             return false;
         }
         String name = file.getName().toLowerCase();
+
+        if(Arrays.asList("runtime","standalone","client","plugin","test","generated").stream()
+                .anyMatch(k -> name.contains(k))){
+            return false;
+        }
+
         return name.startsWith("evosuite") && name.endsWith(".jar");
     }
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2016 Gordon Fraser, Andrea Arcuri and EvoSuite
+ * Copyright (C) 2010-2017 Gordon Fraser, Andrea Arcuri and EvoSuite
  * contributors
  *
  * This file is part of EvoSuite.
@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import org.apache.commons.lang3.ClassUtils;
 import org.evosuite.Properties;
 import org.evosuite.runtime.mock.MockList;
 import org.evosuite.setup.TestUsageChecker;
@@ -119,6 +120,8 @@ public class InspectorManager {
 				Arrays.asList(new String[] { "toString" }));
 		blackList.put("java.awt.event.InvocationEvent",
 				Arrays.asList(new String[] { "getWhen"}));
+		blackList.put("java.lang.StringBuffer",
+				Arrays.asList(new String[] { "capacity"}));
 	}
 
 	/**
@@ -145,7 +148,8 @@ public class InspectorManager {
 
 		if (!method.getReturnType().isPrimitive()
 				&& !method.getReturnType().equals(String.class)
-				&& !method.getReturnType().isEnum()) {
+				&& !method.getReturnType().isEnum()
+				&& !ClassUtils.isPrimitiveWrapper(method.getReturnType())) {
 			return false;
 		}
 

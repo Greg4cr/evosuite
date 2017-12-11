@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2016 Gordon Fraser, Andrea Arcuri and EvoSuite
+ * Copyright (C) 2010-2017 Gordon Fraser, Andrea Arcuri and EvoSuite
  * contributors
  *
  * This file is part of EvoSuite.
@@ -61,25 +61,44 @@ public class MethodNoExceptionCoverageFactory extends
 
         String className = Properties.TARGET_CLASS;
 		Class<?> clazz = Properties.getTargetClassAndDontInitialise();
-        if (clazz != null) {
-            Constructor<?>[] allConstructors = clazz.getDeclaredConstructors();
-            for (Constructor<?> c : allConstructors) {
-                if (TestUsageChecker.canUse(c)) {
-                    String methodName = "<init>" + Type.getConstructorDescriptor(c);
-                    logger.info("Adding goal for constructor " + className + "." + methodName);
-                    goals.add(new MethodNoExceptionCoverageTestFitness(className, methodName));
-                }
-            }
-            Method[] allMethods = clazz.getDeclaredMethods();
-            for (Method m : allMethods) {
-                if (TestUsageChecker.canUse(m)) {
-                    String methodName = m.getName() + Type.getMethodDescriptor(m);
-                    logger.info("Adding goal for method " + className + "." + methodName);
-                    goals.add(new MethodNoExceptionCoverageTestFitness(className, methodName));
-                }
-            }
-        }
+		if (clazz != null) {
+			goals.addAll(getCoverageGoals(clazz, className));
+			Class<?>[] innerClasses = clazz.getDeclaredClasses();
+			for (Class<?> innerClass : innerClasses) {
+				String innerClassName = innerClass.getCanonicalName();
+				goals.addAll(getCoverageGoals(innerClass, innerClassName));
+			}
+		}
 		goalComputationTime = System.currentTimeMillis() - start;
+		return goals;
+	}
+
+
+	private List<MethodNoExceptionCoverageTestFitness> getCoverageGoals(Class<?> clazz, String className) {
+		List<MethodNoExceptionCoverageTestFitness> goals = new ArrayList<>();
+		Constructor<?>[] allConstructors = clazz.getDeclaredConstructors();
+		for (Constructor<?> c : allConstructors) {
+			if (TestUsageChecker.canUse(c)) {
+				String methodName = "<init>" + Type.getConstructorDescriptor(c);
+				logger.info("Adding goal for constructor " + className + "." + methodName);
+				goals.add(new MethodNoExceptionCoverageTestFitness(className, methodName));
+			}
+		}
+		Method[] allMethods = clazz.getDeclaredMethods();
+		for (Method m : allMethods) {
+			if (TestUsageChecker.canUse(m)) {
+				if(clazz.isEnum()) {
+					if (m.getName().equals("valueOf") || m.getName().equals("values")
+							|| m.getName().equals("ordinal")) {
+						logger.debug("Excluding valueOf for Enum " + m.toString());
+						continue;
+					}
+				}
+				String methodName = m.getName() + Type.getMethodDescriptor(m);
+				logger.info("Adding goal for method " + className + "." + methodName);
+				goals.add(new MethodNoExceptionCoverageTestFitness(className, methodName));
+			}
+		}
 		return goals;
 	}
 

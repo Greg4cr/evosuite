@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2016 Gordon Fraser, Andrea Arcuri and EvoSuite
+ * Copyright (C) 2010-2017 Gordon Fraser, Andrea Arcuri and EvoSuite
  * contributors
  *
  * This file is part of EvoSuite.
@@ -72,8 +72,8 @@ public class CoverageAnalysisFinalClassSystemTest extends SystemTestBase {
 
         Map<String, OutputVariable<?>> outputVariables = statistics.getOutputVariables();
 
-        assertEquals(1, (Integer) outputVariables.get(RuntimeVariable.Total_Goals.name()).getValue(), 0.0);
-        assertEquals(1, (Integer) outputVariables.get(RuntimeVariable.Covered_Goals.name()).getValue(), 0.0);
+        assertEquals(2, (Integer) outputVariables.get(RuntimeVariable.Total_Goals.name()).getValue(), 0.0);
+        assertEquals(2, (Integer) outputVariables.get(RuntimeVariable.Covered_Goals.name()).getValue(), 0.0);
         assertEquals(1, (Double) outputVariables.get(RuntimeVariable.LineCoverage.name()).getValue(), 0.0);
         assertEquals(1, (Integer) outputVariables.get(RuntimeVariable.Tests_Executed.name()).getValue(), 0.0);
 

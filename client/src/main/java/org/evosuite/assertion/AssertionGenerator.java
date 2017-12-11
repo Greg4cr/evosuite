@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2016 Gordon Fraser, Andrea Arcuri and EvoSuite
+ * Copyright (C) 2010-2017 Gordon Fraser, Andrea Arcuri and EvoSuite
  * contributors
  *
  * This file is part of EvoSuite.
@@ -222,7 +222,10 @@ public abstract class AssertionGenerator {
 
 			TestGenerationContext.getInstance().resetContext();
 			TestGenerationContext.getInstance().goingToExecuteSUTCode();
+			// We need to reset the target Class since it requires a different instrumentation
+			// for handling assertion generation.
 			Properties.resetTargetClass();
+			Properties.getInitializedTargetClass();
 
 			ClientServices.getInstance().getClientNode().trackOutputVariable(RuntimeVariable.Mutants, MutationPool.getMutantCounter());
 

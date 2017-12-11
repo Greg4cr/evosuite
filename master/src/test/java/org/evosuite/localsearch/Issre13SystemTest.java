@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2016 Gordon Fraser, Andrea Arcuri and EvoSuite
+ * Copyright (C) 2010-2017 Gordon Fraser, Andrea Arcuri and EvoSuite
  * contributors
  *
  * This file is part of EvoSuite.
@@ -144,7 +144,7 @@ public class Issre13SystemTest extends SystemTestBase {
 
 		System.out.println("Test suite: "+suite);
 		
-		TestSuiteLocalSearch localSearch = TestSuiteLocalSearch.getLocalSearch();
+		TestSuiteLocalSearch localSearch = TestSuiteLocalSearch.selectTestSuiteLocalSearch();
 		LocalSearchObjective<TestSuiteChromosome> localObjective = new DefaultLocalSearchObjective<TestSuiteChromosome>();
 		localObjective.addFitnessFunction(fitness);
 		localSearch.doSearch(suite, localObjective);

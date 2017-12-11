@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2016 Gordon Fraser, Andrea Arcuri and EvoSuite
+ * Copyright (C) 2010-2017 Gordon Fraser, Andrea Arcuri and EvoSuite
  * contributors
  *
  * This file is part of EvoSuite.
@@ -97,6 +97,9 @@ public class InspectorTraceObserver extends AssertionTraceObserver<InspectorTrac
 							continue;
 						// The word "hashCode" is also suspicious
 						if(((String)value).toLowerCase().contains("hashcode"))
+							continue;
+						// Avoid asserting anything on values referring to mockito proxy objects
+						if(((String)value).toLowerCase().contains("EnhancerByMockito"))
 							continue;
 						if(target instanceof URL) {
 							// Absolute paths may be different between executions

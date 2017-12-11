@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2016 Gordon Fraser, Andrea Arcuri and EvoSuite
+ * Copyright (C) 2010-2017 Gordon Fraser, Andrea Arcuri and EvoSuite
  * contributors
  *
  * This file is part of EvoSuite.
@@ -20,7 +20,7 @@
 package org.evosuite.symbolic.vm.wrappers;
 
 import org.evosuite.symbolic.expr.bv.IntegerValue;
-import org.evosuite.symbolic.vm.NonNullExpression;
+import org.evosuite.symbolic.expr.ref.ReferenceConstant;
 import org.evosuite.symbolic.vm.SymbolicEnvironment;
 import org.evosuite.symbolic.vm.SymbolicFunction;
 import org.evosuite.symbolic.vm.SymbolicHeap;
@@ -36,7 +36,7 @@ public final class Z_ValueOf extends SymbolicFunction {
 	@Override
 	public Object executeFunction() {
 		IntegerValue int_value = this.getSymbIntegerArgument(0);
-		NonNullExpression symb_boolean = (NonNullExpression) this.getSymbRetVal();
+		ReferenceConstant symb_boolean = (ReferenceConstant) this.getSymbRetVal();
 		Boolean conc_boolean = (Boolean) this.getConcRetVal();
 		env.heap.putField(Types.JAVA_LANG_BOOLEAN, SymbolicHeap.$BOOLEAN_VALUE,
 				conc_boolean, symb_boolean, int_value);

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2016 Gordon Fraser, Andrea Arcuri and EvoSuite
+ * Copyright (C) 2010-2017 Gordon Fraser, Andrea Arcuri and EvoSuite
  * contributors
  *
  * This file is part of EvoSuite.
@@ -17,25 +17,6 @@
  * You should have received a copy of the GNU Lesser General Public
  * License along with EvoSuite. If not, see <http://www.gnu.org/licenses/>.
  */
-/**
- * Copyright (C) 2011,2012 Gordon Fraser, Andrea Arcuri and EvoSuite
- * contributors
- *
- * This file is part of EvoSuite.
- *
- * EvoSuite is free software: you can redistribute it and/or modify it under the
- * terms of the GNU Public License as published by the Free Software Foundation,
- * either version 3 of the License, or (at your option) any later version.
- *
- * EvoSuite is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE. See the GNU Public License for more details.
- *
- * You should have received a copy of the GNU Public License along with
- * EvoSuite. If not, see <http://www.gnu.org/licenses/>.
- *
- * @author Gordon Fraser
- */
 package org.evosuite.testsuite;
 
 import java.util.ArrayList;
@@ -49,6 +30,7 @@ import org.evosuite.ga.Chromosome;
 import org.evosuite.ga.ChromosomeFactory;
 import org.evosuite.ga.ConstructionFailedException;
 import org.evosuite.ga.localsearch.LocalSearchObjective;
+import org.evosuite.ga.operators.mutation.MutationDistribution;
 import org.evosuite.regression.RegressionTestChromosomeFactory;
 import org.evosuite.testcase.ExecutableChromosome;
 import org.evosuite.testcase.execution.ExecutionResult;
@@ -157,6 +139,28 @@ public abstract class AbstractTestSuiteChromosome<T extends ExecutableChromosome
 	/**
 	 * {@inheritDoc}
 	 *
+	 * Replace chromosome at position
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public void crossOver(Chromosome other, int position) throws ConstructionFailedException {
+		if (!(other instanceof AbstractTestSuiteChromosome<?>)) {
+			throw new IllegalArgumentException(
+					"AbstractTestSuiteChromosome.crossOver() called with parameter of unsupported type " + other.getClass());
+		}
+
+		AbstractTestSuiteChromosome<T> chromosome = (AbstractTestSuiteChromosome<T>) other;
+
+		T otherTest =  chromosome.tests.get(position);
+		T clonedTest = (T) otherTest.clone();
+		tests.add(clonedTest);
+
+		this.setChanged(true);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
 	 * Keep up to position1, append copy of other from position2 on
 	 */
 	@SuppressWarnings("unchecked")
@@ -220,10 +224,12 @@ public abstract class AbstractTestSuiteChromosome<T extends ExecutableChromosome
 	public void mutate() {
 		boolean changed = false;
 
+		MutationDistribution probabilityDistribution = MutationDistribution.getMutationDistribution(tests.size());
+
 		// Mutate existing test cases
 		for (int i = 0; i < tests.size(); i++) {
 			T test = tests.get(i);
-			if (Randomness.nextDouble() < 1.0 / tests.size()) {
+			if (probabilityDistribution.toMutate(i)) {
 				test.mutate();
 				if(test.isChanged())
 					changed = true;

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2016 Gordon Fraser, Andrea Arcuri and EvoSuite
+ * Copyright (C) 2010-2017 Gordon Fraser, Andrea Arcuri and EvoSuite
  * contributors
  *
  * This file is part of EvoSuite.
@@ -36,6 +36,7 @@ import org.evosuite.runtime.mock.OverrideMock;
 import org.evosuite.runtime.mock.StaticReplacementMethod;
 import org.evosuite.runtime.mock.StaticReplacementMock;
 import org.evosuite.runtime.mock.java.lang.MockThrowable;
+import org.evosuite.runtime.util.ReflectionUtils;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.slf4j.Logger;
@@ -268,6 +269,8 @@ public class MethodCallReplacementCache {
 		// java/lang/System
 		addReplacementCall(new MethodCallReplacement("java/lang/System", "exit", "(I)V", Opcodes.INVOKESTATIC,
 				PackageInfo.getNameWithSlash(org.evosuite.runtime.System.class), "exit", "(I)V", false, false));
+		addReplacementCall(new MethodCallReplacement("java/lang/System", "setSecurityManager", "(Ljava/lang/SecurityManager;)V", Opcodes.INVOKESTATIC,
+				PackageInfo.getNameWithSlash(org.evosuite.runtime.System.class), "setSecurityManager", "(Ljava/lang/SecurityManager;)V", false, false));
 		addReplacementCall(new MethodCallReplacement("java/lang/System", "currentTimeMillis", "()J",
 				Opcodes.INVOKESTATIC, PackageInfo.getNameWithSlash(org.evosuite.runtime.System.class),
 				"currentTimeMillis", "()J", false, false));
@@ -354,7 +357,7 @@ public class MethodCallReplacementCache {
 		 * replace "fooInstance.bar(x)" with "MockFooClass.bar(fooInstance,x)"
 		 */
 
-		for (Method m : target.getMethods()) {
+		for (Method m : ReflectionUtils.getMethods(target)) {
 			if (Modifier.isStatic(m.getModifiers())) {
 				continue;
 			}
@@ -374,7 +377,7 @@ public class MethodCallReplacementCache {
 			try {
 				mockClass.getMethod(m.getName(), parameters);
 			} catch (NoSuchMethodException e) {
-				logger.debug("Skipping method " + m.getName());
+				// logger.debug("Skipping method " + m.getName());
 				continue;
 			}
 
@@ -420,7 +423,7 @@ public class MethodCallReplacementCache {
 					+ mockClass + " is not an instance of " + target);
 		}
 
-		for (Constructor<?> constructor : mockClass.getDeclaredConstructors()) {
+		for (Constructor<?> constructor : ReflectionUtils.getDeclaredConstructors(mockClass)) {
 			String desc = Type.getConstructorDescriptor(constructor);
 			addSpecialReplacementCall(new MethodCallReplacement(target.getCanonicalName().replace('.', '/'), "<init>",
 					desc, Opcodes.INVOKESPECIAL, mockClass.getCanonicalName().replace('.', '/'), "<init>", desc, false,
@@ -463,7 +466,7 @@ public class MethodCallReplacementCache {
 					+ " is not an instance of " + target);
 		}
 
-		logger.debug("Static Mock: " + mockClass.getCanonicalName() + " for " + target.getCanonicalName());
+		// logger.debug("Static Mock: " + mockClass.getCanonicalName() + " for " + target.getCanonicalName());
 		for (Method method : mockClass.getMethods()) {
 			String desc = Type.getMethodDescriptor(method);
 			addSpecialReplacementCall(new MethodCallReplacement(target.getCanonicalName().replace('.', '/'),

@@ -1,3 +1,22 @@
+/**
+ * Copyright (C) 2010-2017 Gordon Fraser, Andrea Arcuri and EvoSuite
+ * contributors
+ *
+ * This file is part of EvoSuite.
+ *
+ * EvoSuite is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as published
+ * by the Free Software Foundation, either version 3.0 of the License, or
+ * (at your option) any later version.
+ *
+ * EvoSuite is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with EvoSuite. If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.evosuite.localsearch;
 
 import static org.junit.Assert.assertTrue;
@@ -195,6 +214,8 @@ public class TestLocalSearchMIMEType {
 	@Test
 	public void testFitness()
 			throws NoSuchFieldException, SecurityException, NoSuchMethodException, ClassNotFoundException {
+		Properties.RESET_STATIC_FINAL_FIELDS = false;
+		
 		Properties.LOCAL_SEARCH_PROBABILITY = 1.0;
 		Properties.LOCAL_SEARCH_RATE = 1;
 		Properties.LOCAL_SEARCH_BUDGET_TYPE = Properties.LocalSearchBudgetType.TESTS;
@@ -239,17 +260,15 @@ public class TestLocalSearchMIMEType {
 		fitnessFunctions.add(outputCoverage);
 		fitnessFunctions.add(methodCoverage);
 		fitnessFunctions.add(methodNoExceptionCoverage);
-		//fitnessFunctions.add(cbranchCoverage);
+		fitnessFunctions.add(cbranchCoverage);
 
 		for (TestSuiteFitnessFunction ff : fitnessFunctions) {
 			suite.addFitness(ff);
 		}
 
-		Map<TestSuiteFitnessFunction,Double> oldFitnesses = new HashMap<TestSuiteFitnessFunction,Double>();
 		for (TestSuiteFitnessFunction ff : fitnessFunctions) {
 			double oldFitness = ff.getFitness(suite);
 			System.out.println(ff.toString() + "->" + oldFitness);
-			oldFitnesses.put(ff, oldFitness);
 		}
 		double oldFitness = suite.getFitness();
 		System.out.println("oldFitness->" + oldFitness);
@@ -263,24 +282,16 @@ public class TestLocalSearchMIMEType {
 
 		System.out.println("hasImproved=" + hasImproved);
 
-		Map<TestSuiteFitnessFunction,Double> newFitnesses = new HashMap<TestSuiteFitnessFunction,Double>();
 
 		for (TestSuiteFitnessFunction ff : fitnessFunctions) {
 			double newFitness = ff.getFitness(suite);
 			System.out.println(ff.toString() + "->" + newFitness);
-			newFitnesses.put(ff, newFitness);
 
 		}
 		double newFitness = suite.getFitness();
 		System.out.println("newFitness->" + newFitness);
 		System.out.println("newSize->" + suite.getTests().size());
 
-		for (TestSuiteFitnessFunction testSuiteFitnessFunction : fitnessFunctions) {
-			double oldValue = oldFitnesses.get(testSuiteFitnessFunction);
-			double newValue = newFitnesses.get(testSuiteFitnessFunction);
-			assertTrue(newValue<=oldValue);
-		}
-		
 		assertTrue(newFitness<=oldFitness);
 	}
 

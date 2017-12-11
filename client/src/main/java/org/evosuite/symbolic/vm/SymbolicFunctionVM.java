@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2016 Gordon Fraser, Andrea Arcuri and EvoSuite
+ * Copyright (C) 2010-2017 Gordon Fraser, Andrea Arcuri and EvoSuite
  * contributors
  *
  * This file is part of EvoSuite.
@@ -26,6 +26,7 @@ import java.util.Map;
 import org.evosuite.symbolic.expr.IntegerConstraint;
 import org.evosuite.symbolic.expr.bv.IntegerValue;
 import org.evosuite.symbolic.expr.fp.RealValue;
+import org.evosuite.symbolic.expr.ref.ReferenceExpression;
 import org.evosuite.symbolic.vm.apache.regex.Perl5Matcher_Matches;
 import org.evosuite.symbolic.vm.bigint.BigInteger_Ctor;
 import org.evosuite.symbolic.vm.bigint.BigInteger_DivideAndRemainder;
@@ -182,9 +183,9 @@ public final class SymbolicFunctionVM extends AbstractVM {
 	}
 
 	private final SymbolicEnvironment env;
-	private final PathConstraint pc;
+	private final PathConditionCollector pc;
 
-	public SymbolicFunctionVM(SymbolicEnvironment env, PathConstraint pc) {
+	public SymbolicFunctionVM(SymbolicEnvironment env, PathConditionCollector pc) {
 		this.env = env;
 		this.pc = pc;
 		fillFunctionsTable();
@@ -640,7 +641,7 @@ public final class SymbolicFunctionVM extends AbstractVM {
 		IntegerConstraint constraint = myFunctionUnderExecution
 				.beforeExecuteFunction();
 		if (constraint != null) {
-			pc.pushSupportingConstraint(constraint);
+			pc.addSupportingConstraint(constraint);
 		}
 	}
 
